@@ -7,9 +7,10 @@ import { ImageFetcherService } from '../../image-fetcher.service';
 import { StateService } from '../../state.service';
 
 @Component({
-  selector: 'app-game',
-  templateUrl: './game.component.html',
-  styleUrls: ['./game.component.less']
+    selector: 'app-game',
+    templateUrl: './game.component.html',
+    styleUrls: ['./game.component.less'],
+    standalone: false
 })
 export class GameComponent implements OnInit {
 

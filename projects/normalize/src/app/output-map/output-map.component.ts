@@ -8,9 +8,10 @@ import { LayoutService } from '../layout.service';
 import { NormalityLayer } from '../map/normality-layer';
 
 @Component({
-  selector: 'app-output-map',
-  templateUrl: './output-map.component.html',
-  styleUrls: ['./output-map.component.less']
+    selector: 'app-output-map',
+    templateUrl: './output-map.component.html',
+    styleUrls: ['./output-map.component.less'],
+    standalone: false
 })
 export class OutputMapComponent implements OnInit {
 

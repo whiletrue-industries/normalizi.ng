@@ -19,9 +19,10 @@ const PROMPTS = {
 }
 
 @Component({
-  selector: 'app-selfie',
-  templateUrl: './selfie.component.html',
-  styleUrls: ['./selfie.component.less']
+    selector: 'app-selfie',
+    templateUrl: './selfie.component.html',
+    styleUrls: ['./selfie.component.less'],
+    standalone: false
 })
 export class SelfieComponent implements OnInit, AfterViewInit {
   

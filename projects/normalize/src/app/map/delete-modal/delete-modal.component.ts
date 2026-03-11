@@ -5,9 +5,10 @@ import { ImageFetcherService } from '../../image-fetcher.service';
 import { StateService } from '../../state.service';
 
 @Component({
-  selector: 'app-delete-modal',
-  templateUrl: './delete-modal.component.html',
-  styleUrls: ['./delete-modal.component.less']
+    selector: 'app-delete-modal',
+    templateUrl: './delete-modal.component.html',
+    styleUrls: ['./delete-modal.component.less'],
+    standalone: false
 })
 export class DeleteModalComponent implements OnInit {
 

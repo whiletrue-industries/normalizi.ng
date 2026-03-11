@@ -6,9 +6,10 @@ import { ApiService } from '../../api.service';
 import { StateService } from '../../state.service';
 
 @Component({
-  selector: 'app-email-modal',
-  templateUrl: './email-modal.component.html',
-  styleUrls: ['./email-modal.component.less']
+    selector: 'app-email-modal',
+    templateUrl: './email-modal.component.html',
+    styleUrls: ['./email-modal.component.less'],
+    standalone: false
 })
 export class EmailModalComponent implements OnInit {
 

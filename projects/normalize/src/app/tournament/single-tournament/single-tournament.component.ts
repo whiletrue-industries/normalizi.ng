@@ -6,9 +6,10 @@ import { ImageFetcherService } from '../../image-fetcher.service';
 import { StateService } from '../../state.service';
 
 @Component({
-  selector: 'app-single-tournament',
-  templateUrl: './single-tournament.component.html',
-  styleUrls: ['./single-tournament.component.less']
+    selector: 'app-single-tournament',
+    templateUrl: './single-tournament.component.html',
+    styleUrls: ['./single-tournament.component.less'],
+    standalone: false
 })
 export class SingleTournamentComponent implements OnInit, OnChanges, AfterViewInit {
 

@@ -3,9 +3,10 @@ import { AnimationManagerService } from '../animation-manager.service';
 import { ConfigService } from '../config.service';
 
 @Component({
-  selector: 'app-moving-image',
-  templateUrl: './moving-image.component.html',
-  styleUrls: ['./moving-image.component.less']
+    selector: 'app-moving-image',
+    templateUrl: './moving-image.component.html',
+    styleUrls: ['./moving-image.component.less'],
+    standalone: false
 })
 export class MovingImageComponent implements OnChanges, OnDestroy {
 

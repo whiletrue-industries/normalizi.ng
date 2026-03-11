@@ -11,7 +11,8 @@ import { GridItem } from "../datatypes";
 
 @Component({
     selector: 'app-installation-base',
-    template: ``
+    template: ``,
+    standalone: false
 })
 export class InstallationBase implements AfterViewInit, OnInit, OnDestroy {
 

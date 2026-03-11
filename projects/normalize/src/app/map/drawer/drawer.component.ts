@@ -4,17 +4,18 @@ import { first } from 'rxjs/operators';
 import { LayoutService } from '../../layout.service';
 
 @Component({
-  selector: 'app-drawer',
-  templateUrl: './drawer.component.html',
-  styleUrls: ['./drawer.component.less'],
-  host: {
-    'class': 'drawer',
-    '[class.open]': 'open && !hidden',
-    '[class.hidden]': 'hidden',
-    '[class.desktop]': 'layout.desktop',
-    '[class.mobile]': 'layout.mobile',
-    '(touchstart)': 'touchstart($event)',
-  }
+    selector: 'app-drawer',
+    templateUrl: './drawer.component.html',
+    styleUrls: ['./drawer.component.less'],
+    host: {
+        'class': 'drawer',
+        '[class.open]': 'open && !hidden',
+        '[class.hidden]': 'hidden',
+        '[class.desktop]': 'layout.desktop',
+        '[class.mobile]': 'layout.mobile',
+        '(touchstart)': 'touchstart($event)',
+    },
+    standalone: false
 })
 export class DrawerComponent implements OnInit, OnChanges {
 

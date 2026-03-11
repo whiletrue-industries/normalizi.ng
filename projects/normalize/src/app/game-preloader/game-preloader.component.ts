@@ -3,9 +3,10 @@ import { ApiService } from '../api.service';
 import { ImageFetcherService } from '../image-fetcher.service';
 
 @Component({
-  selector: 'app-game-preloader',
-  templateUrl: './game-preloader.component.html',
-  styleUrls: ['./game-preloader.component.less']
+    selector: 'app-game-preloader',
+    templateUrl: './game-preloader.component.html',
+    styleUrls: ['./game-preloader.component.less'],
+    standalone: false
 })
 export class GamePreloaderComponent implements OnInit {
 

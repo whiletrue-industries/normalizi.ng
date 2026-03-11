@@ -3,12 +3,13 @@ import { Subscription, timer } from 'rxjs';
 import { first } from 'rxjs/operators';
 
 @Component({
-  selector: 'app-definition',
-  templateUrl: './definition.component.html',
-  styleUrls: ['./definition.component.less'],
-  host: {
-    '[class.visible]': 'visible'
-  }
+    selector: 'app-definition',
+    templateUrl: './definition.component.html',
+    styleUrls: ['./definition.component.less'],
+    host: {
+        '[class.visible]': 'visible'
+    },
+    standalone: false
 })
 export class DefinitionComponent implements OnInit {
 

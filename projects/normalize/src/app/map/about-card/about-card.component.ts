@@ -6,9 +6,10 @@ import { map } from 'rxjs/operators';
 import * as showdown from 'showdown';
 
 @Component({
-  selector: 'app-about-card',
-  templateUrl: './about-card.component.html',
-  styleUrls: ['./about-card.component.less']
+    selector: 'app-about-card',
+    templateUrl: './about-card.component.html',
+    styleUrls: ['./about-card.component.less'],
+    standalone: false
 })
 export class AboutCardComponent implements OnInit {
 
