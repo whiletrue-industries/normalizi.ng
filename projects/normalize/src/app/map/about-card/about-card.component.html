@@ -1,24 +1,28 @@
 <div class='info'>
-    <div class='content'>
-        <div class="nav">
-          <div>
-            <a href="#aboutnormalizing">About</a>
-            <a href="#credits">Credits</a>
-            <a href="#exhibit">Exhibit</a>
-            <a href="#contact">Contact</a>
-            <a href="#frequentlyaskedquestions">FAQ</a>
-            <a href="#privacypolicy">Privacy</a>
+  <div class='content'>
+    <div class="nav">
+      <div>
+        <a href="#aboutnormalizing">About</a>
+        <a href="#credits">Credits</a>
+        <a href="#exhibit">Exhibit</a>
+        <a href="#contact">Contact</a>
+        <a href="#frequentlyaskedquestions">FAQ</a>
+        <a href="#privacypolicy">Privacy</a>
 
-          </div>
-        </div>
-        <div class='title'>Normalizi.ng</div>
-        <div class='subtitle'>How do <em>normal</em> people look like?</div>
-        <div class='subsubtitle'><strong>Bias is not a bug of AI.</strong>  We constantly <em>capture, classify, analyze & normalize</em> ourselves and each other online. Normalizi.ng invites you to reflect on the past and present of this normalization.
-          <br/><br/>
-          Starting with you:
-        </div>
-        <app-start-button label='start normalizi.ng' (click)='start.emit()' *ngIf='showStart'></app-start-button>
-        <div class='md' [innerHtml]='html'></div>
-        <app-start-button label='start normalizi.ng' (click)='start.emit()' *ngIf='showStart'></app-start-button>
+      </div>
     </div>
+    <div class='title'>Normalizi.ng</div>
+    <div class='subtitle'>How do <em>normal</em> people look like?</div>
+    <div class='subsubtitle'><strong>Bias is not a bug of AI.</strong>  We constantly <em>capture, classify, analyze & normalize</em> ourselves and each other online. Normalizi.ng invites you to reflect on the past and present of this normalization.
+    <br/><br/>
+    Starting with you:
+  </div>
+  @if (showStart) {
+    <app-start-button label='start normalizi.ng' (click)='start.emit()'></app-start-button>
+  }
+  <div class='md' [innerHtml]='html'></div>
+  @if (showStart) {
+    <app-start-button label='start normalizi.ng' (click)='start.emit()'></app-start-button>
+  }
+</div>
 </div>

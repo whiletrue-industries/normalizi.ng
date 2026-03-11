@@ -1,19 +1,25 @@
-<div class='candidates' [class.forward]='direction === true' [class.backward]='direction === false'
-    [class.state-start]='state === "start"' 
-    [class.state-starting]='state === "starting"' 
+@if (candidates) {
+  <div class='candidates' [class.forward]='direction === true' [class.backward]='direction === false'
+    [class.state-start]='state === "start"'
+    [class.state-starting]='state === "starting"'
     [class.state-end]='state === "end"'
-     *ngIf='candidates'>
-    <ng-container *ngFor='let candidate of candidates; let i = index'>
-        <div class='candidate' #handle [style.width]='sizes[i] + "vw"'>
-            <app-moving-image [style.transform]='"scale(" + scales[i] + ")"' [src]='imageFetcher.fetchImage(candidate.image)' [index]='index' [id]='candidate.id'></app-moving-image>
-        </div>
-        <div class='spacer' *ngIf='i === 0'></div>
-    </ng-container>
-</div>
+    >
+    @for (candidate of candidates; track candidate; let i = $index) {
+      <div class='candidate' #handle [style.width]='sizes[i] + "vw"'>
+        <app-moving-image [style.transform]='"scale(" + scales[i] + ")"' [src]='imageFetcher.fetchImage(candidate.image)' [index]='index' [id]='candidate.id'></app-moving-image>
+      </div>
+      @if (i === 0) {
+        <div class='spacer'></div>
+      }
+    }
+  </div>
+}
 <ng-content></ng-content>
 <div class='texts'>
-    <span [style.opacity]='1-position'>Swipe the side that looks</span>
-    <span ><strong>more normal</strong></span>
+  <span [style.opacity]='1-position'>Swipe the side that looks</span>
+  <span ><strong>more normal</strong></span>
 </div>
 <app-slider [state]='state' [extraHandles]='extraHandles' (location)='location = $event' (selected)='finish($event)'></app-slider>
-<app-timeout-counter (canceled)='triggerTimeout.next(true); timeoutVisible=false' *ngIf='timeoutVisible'></app-timeout-counter>
+@if (timeoutVisible) {
+  <app-timeout-counter (canceled)='triggerTimeout.next(true); timeoutVisible=false'></app-timeout-counter>
+}

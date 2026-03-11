@@ -1,21 +1,27 @@
-<ng-container *ngIf='game && game.records && loaded'>
-    <ng-container *ngIf='index < maxIndex && index >= 0'>
-        <app-single-tournament [candidates]='candidates' [index]='feature' (results)='addResults($event)'>
-            <div class='progress'>
-                <div *ngFor='let _ of Array(maxIndex); let i1 = index' class='progress-group'>
-                    <div *ngFor='let _ of Array(TUPLES_PER_FEATURE); let i2 = index' class='progress-item'
-                                [class.done]='index > i1 || (index === i1 && (TUPLES_PER_FEATURE - tuples.length) > i2)'>
-                    </div>
-                </div>
-            </div>
-        </app-single-tournament>
-    </ng-container>
-    <ng-container *ngIf='index === maxIndex'>
-        <h2>Done!</h2>
-    </ng-container>
-</ng-container>
-<ng-container *ngIf='!game || !game.records || !loaded'>
-    <app-loader></app-loader>
-</ng-container>
+@if (game && game.records && loaded) {
+  @if (index < maxIndex && index >= 0) {
+    <app-single-tournament [candidates]='candidates' [index]='feature' (results)='addResults($event)'>
+      <div class='progress'>
+        @for (_ of Array(maxIndex); track _; let i1 = $index) {
+          <div class='progress-group'>
+            @for (_ of Array(TUPLES_PER_FEATURE); track _; let i2 = $index) {
+              <div class='progress-item'
+                [class.done]='index > i1 || (index === i1 && (TUPLES_PER_FEATURE - tuples.length) > i2)'>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </app-single-tournament>
+  }
+  @if (index === maxIndex) {
+    <h2>Done!</h2>
+  }
+}
+@if (!game || !game.records || !loaded) {
+  <app-loader></app-loader>
+}
 <app-game-preloader (loaded)='loaded = true'></app-game-preloader>
-<app-definition *ngIf='definition' imgSrc='def-step2.png' (closed)='definition=false'></app-definition>
+@if (definition) {
+  <app-definition imgSrc='def-step2.png' (closed)='definition=false'></app-definition>
+}

@@ -1,83 +1,87 @@
 <div>
-    <div class='row top bottom'>
-        <div class='cell'>
-            <label>Composite</label>
-            <span class='value'>{{normality}}</span>
-        </div>
-        <div class='cell'>
-            <label>Face Normality</label>
-            <span class='value'>{{face_normality}}</span>
-        </div>
+  <div class='row top bottom'>
+    <div class='cell'>
+      <label>Composite</label>
+      <span class='value'>{{normality}}</span>
     </div>
-    <div class='row top'>
-        <div class='cell'>
-            <label>Forehead Normality</label>
-            <span class='value'>{{forehead_normality}}</span>
-        </div>
-        <div class='cell'>
-            <label>Nose Normality</label>
-            <span class='value'>{{nose_normality}}</span>
-        </div>
+    <div class='cell'>
+      <label>Face Normality</label>
+      <span class='value'>{{face_normality}}</span>
     </div>
-    <div class='row bottom'>
-        <div class='cell'>
-            <label>Eyes Normality</label>
-            <span class='value'>{{eyes_normality}}</span>
-        </div>
-        <div class='cell'>
-            <label>Mouth Normality</label>
-            <span class='value'>{{mouth_normality}}</span>
-        </div>
+  </div>
+  <div class='row top'>
+    <div class='cell'>
+      <label>Forehead Normality</label>
+      <span class='value'>{{forehead_normality}}</span>
     </div>
-    <div class='row top'>
-        <div class='cell'>
-            <label>Age (apparent)</label>
-            <span class='value'>~{{age}}</span>
-        </div>
-        <div class='cell'>
-            <label>Gender (apparent)</label>
-            <span class='value'>{{gender}}</span>
-        </div>
+    <div class='cell'>
+      <label>Nose Normality</label>
+      <span class='value'>{{nose_normality}}</span>
     </div>
-    <div class='row bottom'>
-        <div class='cell'>
-            <label>Confidence</label>
-            <span class='value'></span>
-        </div>
-        <div class='cell'>
-            <label>Confidence</label>
-            <span class='value'>{{gender_confidence}}</span>
-        </div>
+  </div>
+  <div class='row bottom'>
+    <div class='cell'>
+      <label>Eyes Normality</label>
+      <span class='value'>{{eyes_normality}}</span>
     </div>
+    <div class='cell'>
+      <label>Mouth Normality</label>
+      <span class='value'>{{mouth_normality}}</span>
+    </div>
+  </div>
+  <div class='row top'>
+    <div class='cell'>
+      <label>Age (apparent)</label>
+      <span class='value'>~{{age}}</span>
+    </div>
+    <div class='cell'>
+      <label>Gender (apparent)</label>
+      <span class='value'>{{gender}}</span>
+    </div>
+  </div>
+  <div class='row bottom'>
+    <div class='cell'>
+      <label>Confidence</label>
+      <span class='value'></span>
+    </div>
+    <div class='cell'>
+      <label>Confidence</label>
+      <span class='value'>{{gender_confidence}}</span>
+    </div>
+  </div>
 </div>
 <app-moving-image [src]='itemImage' [index]='4' [id]='item.image'></app-moving-image>
 
 <div class='row'>
-    <div class='cell full'>
-        <label>Captured in</label>
-        <span class='value'>{{placeName}}</span>
-    </div>
+  <div class='cell full'>
+    <label>Captured in</label>
+    <span class='value'>{{placeName}}</span>
+  </div>
 </div>
 <div class='row'>
-    <div class='cell full'>
-        <label>Date</label>
-        <span class='value timestamp'><span>{{createdDate}}</span>&nbsp;<span>{{createdTime}}+GMT</span></span>
-    </div>
+  <div class='cell full'>
+    <label>Date</label>
+    <span class='value timestamp'><span>{{createdDate}}</span>&nbsp;<span>{{createdTime}}+GMT</span></span>
+  </div>
 </div>
 <div class='row'>
-    <div class='cell full'>
-        <label>By</label>
-        <span class='value'><span class='header'>Normalizi.ng</span></span>
-    </div>
+  <div class='cell full'>
+    <label>By</label>
+    <span class='value'><span class='header'>Normalizi.ng</span></span>
+  </div>
 </div>
 
 
-<div class='button-row' *ngIf='hasShare'>
+@if (hasShare) {
+  <div class='button-row'>
     <div class='button' (click)='share()'><img src='assets/img/ic-share.svg'>share this card</div>
-</div>
+  </div>
+}
 
-<div class='button-row' *ngIf='ownCard'>
+@if (ownCard) {
+  <div class='button-row'>
     <div class='button' (click)='start.emit()'><img src='assets/img/ic-refresh.svg'>retake</div>
     <div class='button' (click)='delete.emit()'><img src='assets/img/ic-delete.svg'>delete</div>
-</div>
+  </div>
+}
 <pre style='font-size:10px;text-align:right;'>{{item.id}}</pre>

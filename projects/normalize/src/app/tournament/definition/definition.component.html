@@ -1,5 +1,7 @@
 <div class='wrapper'>
-    <div class='def' [style.background-image]="'url(/assets/img/' + imgSrc + ')'"></div>
-    <div class='okay'></div>
+  <div class='def' [style.background-image]="'url(/assets/img/' + imgSrc + ')'"></div>
+  <div class='okay'></div>
 </div>
-<a class='overlay' (click)='onclose()' (touchend)='onclose()' *ngIf='visible'></a>
+@if (visible) {
+  <a class='overlay' (click)='onclose()' (touchend)='onclose()'></a>
+}
