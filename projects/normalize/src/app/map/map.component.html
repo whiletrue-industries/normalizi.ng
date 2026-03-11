@@ -1,20 +1,32 @@
 <app-output-map [grid]='grid'></app-output-map>
-<app-feature-selector [feature]='feature' (selected)='feature = $event' *ngIf='false'></app-feature-selector>
-<div class='overlay' *ngIf='overlay' (click)='overlay = false; drawerOpen = false'></div>
+@if (false) {
+  <app-feature-selector [feature]='feature' (selected)='feature = $event'></app-feature-selector>
+}
+@if (overlay) {
+  <div class='overlay' (click)='overlay = false; drawerOpen = false'></div>
+}
 <app-drawer [open]='drawerOpen' [hidden]='consentModalOpen || deleteModalOpen' (changed)='overlay = false; drawerOpen = $event'
-            [class.focused]='focusedState'
->
-    <ng-container *ngIf='!focusedItem'>
-        <app-about-card [showStart]='!hasSelfie' (start)='start()'></app-about-card>
-    </ng-container>
-    <ng-container *ngIf='focusedItem'>
-        <app-report-card [item]='focusedItem.item' (delete)='delete()' (start)='start(true)'></app-report-card>
-    </ng-container>
+  [class.focused]='focusedState'
+  >
+  @if (!focusedItem) {
+    <app-about-card [showStart]='!hasSelfie' (start)='start()'></app-about-card>
+  }
+  @if (focusedItem) {
+    <app-report-card [item]='focusedItem.item' (delete)='delete()' (start)='start(true)'></app-report-card>
+  }
 </app-drawer>
-<app-start-button label='start' [class.offseted]='layout.desktop && drawerOpen' (click)='start()' *ngIf='!hasSelfie'></app-start-button>
-<app-focus-button label='start' [class.offseted]='layout.desktop && drawerOpen' (click)='focusOnSelf()' *ngIf='hasSelfie && ownGI'></app-focus-button>
-<img class='info-button' (click)='focusedItem=null; drawerOpen=true' src='/assets/img/info-button.svg' *ngIf='!drawerOpen || !!focusedItem'>
-<app-definition imgSrc='def-step3.png' *ngIf='definition' (closed)='definitionClosed.next()'></app-definition>
+@if (!hasSelfie) {
+  <app-start-button label='start' [class.offseted]='layout.desktop && drawerOpen' (click)='start()'></app-start-button>
+}
+@if (hasSelfie && ownGI) {
+  <app-focus-button label='start' [class.offseted]='layout.desktop && drawerOpen' (click)='focusOnSelf()'></app-focus-button>
+}
+@if (!drawerOpen || !!focusedItem) {
+  <img class='info-button' (click)='focusedItem=null; drawerOpen=true' src='/assets/img/info-button.svg'>
+}
+@if (definition) {
+  <app-definition imgSrc='def-step3.png' (closed)='definitionClosed.next()'></app-definition>
+}
 <app-consent-modal [open]='consentModalOpen' (closed)='consentModalOpen = false'></app-consent-modal>
 <app-email-modal [open]='emailModalOpen' (closed)='emailModalOpen = false'></app-email-modal>
 <app-redirect-modal [open]='redirectModalOpen' (closed)='redirectModalOpen = false'></app-redirect-modal>

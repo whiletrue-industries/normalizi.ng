@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { HttpClientModule } from '@angular/common/http';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
 import { AppRoutingModule } from './app-routing.module';
@@ -37,48 +37,41 @@ import { InstallationCardContainerComponent } from './installation/installation-
 import { LessmoreComponent } from './lessmore/lessmore.component';
 import { TimeoutCounterComponent } from './tournament/timeout-counter/timeout-counter.component';
 
-@NgModule({
-  declarations: [
-    AppComponent,
-    SelfieComponent,
-    MovingImageComponent,
-    DatasetComponent,
-    GameComponent,
-    SingleTournamentComponent,
-    MapComponent,
-    MainComponent,
-    SliderComponent,
-    FeatureSelectorComponent,
-    DrawerComponent,
-    StartButtonComponent,
-    ReportCardComponent,
-    LoaderComponent,
-    GamePreloaderComponent,
-    ModalComponent,
-    ConsentModalComponent,
-    EmailModalComponent,
-    AboutCardComponent,
-    RedirectModalComponent,
-    DeleteModalComponent,
-    DefinitionComponent,
-    FocusButtonComponent,
-    OutputMapComponent,
-    InstallationVComponent,
-    InstallationHComponent,
-    InstallationCardComponent,
-    InstallationCardContainerComponent,
-    LessmoreComponent,
-    TimeoutCounterComponent
-  ],
-  imports: [
-    BrowserModule,
-    AppRoutingModule,
-    HttpClientModule,
-    BrowserAnimationsModule,
-    MatSlideToggleModule,
-    FormsModule,
-  ],
-  providers: [],
-  bootstrap: [AppComponent]
-})
+@NgModule({ declarations: [
+        AppComponent,
+        SelfieComponent,
+        MovingImageComponent,
+        DatasetComponent,
+        GameComponent,
+        SingleTournamentComponent,
+        MapComponent,
+        MainComponent,
+        SliderComponent,
+        FeatureSelectorComponent,
+        DrawerComponent,
+        StartButtonComponent,
+        ReportCardComponent,
+        LoaderComponent,
+        GamePreloaderComponent,
+        ModalComponent,
+        ConsentModalComponent,
+        EmailModalComponent,
+        AboutCardComponent,
+        RedirectModalComponent,
+        DeleteModalComponent,
+        DefinitionComponent,
+        FocusButtonComponent,
+        OutputMapComponent,
+        InstallationVComponent,
+        InstallationHComponent,
+        InstallationCardComponent,
+        InstallationCardContainerComponent,
+        LessmoreComponent,
+        TimeoutCounterComponent
+    ],
+    bootstrap: [AppComponent], imports: [BrowserModule,
+        AppRoutingModule,
+        BrowserAnimationsModule,
+        MatSlideToggleModule,
+        FormsModule], providers: [provideHttpClient(withInterceptorsFromDi())] })
 export class AppModule { }

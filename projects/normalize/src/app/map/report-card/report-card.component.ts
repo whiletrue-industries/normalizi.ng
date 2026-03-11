@@ -6,9 +6,10 @@ import { ImageFetcherService } from '../../image-fetcher.service';
 import { StateService } from '../../state.service';
 
 @Component({
-  selector: 'app-report-card',
-  templateUrl: './report-card.component.html',
-  styleUrls: ['./report-card.component.less'],
+    selector: 'app-report-card',
+    templateUrl: './report-card.component.html',
+    styleUrls: ['./report-card.component.less'],
+    standalone: false
 })
 export class ReportCardComponent implements OnInit, OnChanges, OnDestroy {
 

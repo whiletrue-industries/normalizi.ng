@@ -1,6 +1,8 @@
-<ng-container *ngIf='game && game.records && count < game.records.length'>
-    <div class='placeholder' *ngFor='let candidate of game.records'>
-        <img
-            [src]='imageFetcher.fetchImage(candidate.image)' (load)='count = count + 1'>
-    </div>    
-</ng-container>
+@if (game && game.records && count < game.records.length) {
+  @for (candidate of game.records; track candidate) {
+    <div class='placeholder'>
+      <img
+        [src]='imageFetcher.fetchImage(candidate.image)' (load)='count = count + 1'>
+    </div>
+  }
+}

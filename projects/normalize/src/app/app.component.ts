@@ -2,9 +2,10 @@ import { AfterViewInit, Component, ElementRef } from '@angular/core';
 import { LayoutService } from './layout.service';
 
 @Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.less']
+    selector: 'app-root',
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.less'],
+    standalone: false
 })
 export class AppComponent implements AfterViewInit {
 

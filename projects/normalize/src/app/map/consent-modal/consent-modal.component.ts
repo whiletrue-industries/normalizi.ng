@@ -4,9 +4,10 @@ import { Router } from '@angular/router';
 import { StateService } from '../../state.service';
 
 @Component({
-  selector: 'app-consent-modal',
-  templateUrl: './consent-modal.component.html',
-  styleUrls: ['./consent-modal.component.less']
+    selector: 'app-consent-modal',
+    templateUrl: './consent-modal.component.html',
+    styleUrls: ['./consent-modal.component.less'],
+    standalone: false
 })
 export class ConsentModalComponent implements OnInit {
 

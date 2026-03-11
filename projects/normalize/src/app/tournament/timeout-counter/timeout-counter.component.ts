@@ -5,12 +5,13 @@ import { interval } from 'rxjs';
 import { take } from 'rxjs/operators';
 
 @Component({
-  selector: 'app-timeout-counter',
-  templateUrl: './timeout-counter.component.html',
-  styleUrls: ['./timeout-counter.component.less'],
-  host: {
-    '(touchstart)': 'cancel()'
-  }
+    selector: 'app-timeout-counter',
+    templateUrl: './timeout-counter.component.html',
+    styleUrls: ['./timeout-counter.component.less'],
+    host: {
+        '(touchstart)': 'cancel()'
+    },
+    standalone: false
 })
 export class TimeoutCounterComponent implements OnInit {
 

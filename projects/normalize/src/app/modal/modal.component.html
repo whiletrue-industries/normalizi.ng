@@ -1,11 +1,13 @@
 <div class='modal-wrapper' [class.open]='open'>
-    <div class='background'></div>
-    <div class='modal-body'>
-        <div class='close' (click)='close(false)'></div>
-        <div class='content'><ng-content></ng-content></div>
-        <div class='actions'>
-            <a class='cancel_button' (click)='close(false)' *ngIf='cancel_text'>{{cancel_text}}</a>
-            <button class='submit_button' [class.allowed]='submit_allowed' (click)='close(true)'>{{submit_text}}</button>
-        </div>
+  <div class='background'></div>
+  <div class='modal-body'>
+    <div class='close' (click)='close(false)'></div>
+    <div class='content'><ng-content></ng-content></div>
+    <div class='actions'>
+      @if (cancel_text) {
+        <a class='cancel_button' (click)='close(false)'>{{cancel_text}}</a>
+      }
+      <button class='submit_button' [class.allowed]='submit_allowed' (click)='close(true)'>{{submit_text}}</button>
     </div>
+  </div>
 </div>

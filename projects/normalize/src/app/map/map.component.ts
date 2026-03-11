@@ -17,9 +17,10 @@ import { EmailModalComponent } from './email-modal/email-modal.component';
 import { OutputMapComponent } from '../output-map/output-map.component';
 
 @Component({
-  selector: 'app-map',
-  templateUrl: './map.component.html',
-  styleUrls: ['./map.component.less']
+    selector: 'app-map',
+    templateUrl: './map.component.html',
+    styleUrls: ['./map.component.less'],
+    standalone: false
 })
 export class MapComponent implements OnInit, AfterViewInit {
 

@@ -8,9 +8,10 @@ import { FaceProcessorService } from '../face-processor.service';
 import * as faceapi from 'face-api.js';
 
 @Component({
-  selector: 'app-dataset',
-  templateUrl: './dataset.component.html',
-  styleUrls: ['./dataset.component.less']
+    selector: 'app-dataset',
+    templateUrl: './dataset.component.html',
+    styleUrls: ['./dataset.component.less'],
+    standalone: false
 })
 export class DatasetComponent implements OnInit, AfterViewInit {
 

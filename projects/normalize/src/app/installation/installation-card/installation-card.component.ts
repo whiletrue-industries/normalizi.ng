@@ -3,9 +3,10 @@ import { ImageItem } from '../../datatypes';
 import { ImageFetcherService } from '../../image-fetcher.service';
 
 @Component({
-  selector: 'app-installation-card',
-  templateUrl: './installation-card.component.html',
-  styleUrls: ['./installation-card.component.less']
+    selector: 'app-installation-card',
+    templateUrl: './installation-card.component.html',
+    styleUrls: ['./installation-card.component.less'],
+    standalone: false
 })
 export class InstallationCardComponent implements OnInit {
 

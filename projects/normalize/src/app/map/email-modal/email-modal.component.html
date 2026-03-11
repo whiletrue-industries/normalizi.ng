@@ -1,12 +1,14 @@
 <app-modal submit_text='send' cancel_text='no, thanks' [open]='open' [submit_allowed]='hasEmail' (closed)='close($event)'>
-    <span class='header'>We’re done. Thank you!</span>
+  <span class='header'>We’re done. Thank you!</span>
 
-    <span>We would like to send you a private link so you can always access and manage your data.</span>
-        
-    <span>Where should we send the link?</span>
+  <span>We would like to send you a private link so you can always access and manage your data.</span>
 
-    <input #input type='email' placeholder='your email' [(ngModel)]='emailAddress'>
-    <span class='error' *ngIf='emailAddress && !hasEmail'>oops... this doesn’t look like an email address</span>
+  <span>Where should we send the link?</span>
 
-    <span class='smallprint'>*We won’t save your email and only use it once</span>
+  <input #input type='email' placeholder='your email' [(ngModel)]='emailAddress'>
+  @if (emailAddress && !hasEmail) {
+    <span class='error'>oops... this doesn’t look like an email address</span>
+  }
+
+  <span class='smallprint'>*We won’t save your email and only use it once</span>
 </app-modal>

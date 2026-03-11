@@ -3,9 +3,10 @@ import { from, fromEvent, Subject, Subscription } from 'rxjs';
 import { debounceTime, delay, map, tap, throttle, throttleTime } from 'rxjs/operators';
 
 @Component({
-  selector: 'app-slider',
-  templateUrl: './slider.component.html',
-  styleUrls: ['./slider.component.less']
+    selector: 'app-slider',
+    templateUrl: './slider.component.html',
+    styleUrls: ['./slider.component.less'],
+    standalone: false
 })
 export class SliderComponent implements OnInit, AfterViewInit, OnDestroy {
 
