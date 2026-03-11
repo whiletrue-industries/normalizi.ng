@@ -10,16 +10,16 @@ Normal flow for code changes is:
 - Based on the description of the issue, write a detailed implementation plan and add it to the issue as a comment.
   Follow the guidelines in the existing documentation (see below) where applicable.
   Ask the user for confirmation of the plan (or for changes) before starting implementation.
-- Create a new branch from `main` named after the issue number and short description, example: '42/fix-login-bug'
-  Make sure your local `main` branch is up to date before creating the new branch.
+- Create a new branch from `master` named after the issue number and short description, example: '42/fix-login-bug'
+  Make sure your local `master` branch is up to date before creating the new branch.
 - Make code changes in the branch, committing often with clear commit messages.
   Each commit should represent a logical unit of work, with clear and detailed commit messages.
 - When done, ask the user to review the changes and provide feedback or request modifications.
 - Once the user approves, push the branch to GitHub.
-- When the work is complete, open a pull request against `main`, linking the issue.
+- When the work is complete, open a pull request against `master`, linking the issue.
   Pull request description should summarize the changes made and reference the issue.
   It should include the text 'fixes #ISSUE_NUMBER' to automatically close the issue when the PR is merged.
-- Once the pull request is approved and passes all checks, merge it into `main` using "Squash and merge".
+- Once the pull request is approved and passes all checks, merge it into `master` using "Squash and merge".
 
 # COMMON TASKS
 

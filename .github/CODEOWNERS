@@ -1,0 +1,4 @@
+# Code Owners - these users will be automatically requested for review on PRs
+
+# Global rule - @akariv must review all changes
+* @akariv
