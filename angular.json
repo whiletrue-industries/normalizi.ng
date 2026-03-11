@@ -26,7 +26,6 @@
             "main": "projects/normalize/src/main.ts",
             "polyfills": "projects/normalize/src/polyfills.ts",
             "tsConfig": "projects/normalize/tsconfig.app.json",
-            "aot": true,
             "assets": [
               "projects/normalize/src/favicon.ico",
               "projects/normalize/src/favicons",
@@ -37,7 +36,13 @@
               "projects/normalize/src/styles.less",
               "node_modules/leaflet/dist/leaflet.css"
             ],
-            "scripts": []
+            "scripts": [],
+            "vendorChunk": true,
+            "extractLicenses": false,
+            "buildOptimizer": false,
+            "sourceMap": true,
+            "optimization": false,
+            "namedChunks": true
           },
           "configurations": {
             "production": {
@@ -67,7 +72,8 @@
                 }
               ]
             }
-          }
+          },
+          "defaultConfiguration": ""
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
