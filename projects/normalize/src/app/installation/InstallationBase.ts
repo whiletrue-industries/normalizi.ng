@@ -80,10 +80,7 @@ export class InstallationBase implements AfterViewInit, OnInit, OnDestroy {
                 if (this.items.length > 0) {
                     this.mapElement.normalityLayer.refresh();
                     const pos = this.items[0].pos;
-                    let center: L.LatLngTuple =[-pos.y - 0.5, pos.x + 0.5];
-                    const projected = this.map.project(center);
-                    const moved = new L.Point(projected.x + this.offsetX, projected.y);
-                    const newCenter = this.map.unproject(moved);
+                    const mapCenter: L.LatLngTuple = [-this.configuration.dim / 2, this.configuration.dim / 2];
 
                     if (this.breatheOverlay) {
                         // precaution
@@ -92,7 +89,32 @@ export class InstallationBase implements AfterViewInit, OnInit, OnDestroy {
                     const bounds: L.LatLngBoundsExpression = [[-pos.y - 0.75, pos.x + 0.25], [-pos.y - 0.25, pos.x + 0.75]];
                     this.breatheOverlay = new L.ImageOverlay('/assets/img/breathe.svg', bounds).addTo(this.map);
 
-                    this.map.flyTo(center, this.configuration.min_zoom + 2, Object.assign({duration: 1}, this.baseFlyToParams));
+                    // Hide interactive paths before zoom-out
+                    const paths = Array.from(document.querySelectorAll('.leaflet-interactive')) as SVGPathElement[];
+                    const pathWidths: Map<SVGPathElement, string> = new Map();
+                    
+                    paths.forEach((path: SVGPathElement) => {
+                        const computed = window.getComputedStyle(path);
+                        const originalWidth = computed.strokeWidth;
+                        pathWidths.set(path, originalWidth);
+                        path.style.strokeWidth = '0';
+                    });
+
+                    // Zoom out with smoother cubic easing curve
+                    const cubicEase = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+                    this.map.flyTo(mapCenter, this.configuration.min_zoom + 2, Object.assign({duration: 1, easing: cubicEase}, this.baseFlyToParams));
+                    
+                    // Animate paths back from 0 to their original width before zoom-in
+                    setTimeout(() => {
+                        paths.forEach((path: SVGPathElement) => {
+                            const originalWidth = pathWidths.get(path);
+                            path.style.transition = 'stroke-width 1s ease-out';
+                            // Trigger reflow to ensure transition is applied
+                            (path as any).offsetHeight;
+                            path.style.strokeWidth = originalWidth;
+                        });
+                    }, 500);
+
                     setTimeout(() => {
                         // this.map.flyTo(newCenter, this.configuration.max_zoom, Object.assign({duration: 5}, this.baseFlyToParams));
                         const params: L.FitBoundsOptions = Object.assign({duration: 5, maxZoom: this.configuration.max_zoom, animate: true}, this.baseFlyToParams);

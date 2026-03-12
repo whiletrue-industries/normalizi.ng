@@ -5,14 +5,22 @@
     width: 2160px;
     height: 1920px;
     flex-flow: row;
+    position: relative;
+    overflow: hidden;
     > * {
         flex: 0 0 50%;
-        overflow: hidden;
         height: 100%;
         position: relative;
+        z-index: 1;
     }
     .map {
-        position: relative;
+        position: absolute;
+        left: 0;
+        top: 0;
+        // 3240px = 2 × 1620px, keeping Leaflet's center at 75% of the 2160px screen
+        width: 3240px;
+        height: 100%;
+        z-index: 0;
         app-lessmore {
             position: absolute;
             bottom: 16px;
@@ -50,4 +58,13 @@
             opacity: 0;
         }   
     }
+}
+
+.map app-lessmore {
+    left: 33%;
+    right: auto !important;
+}
+
+.qr-code{
+    left: 1984px;
 }
