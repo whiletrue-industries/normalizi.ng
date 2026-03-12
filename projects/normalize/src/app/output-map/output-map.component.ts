@@ -40,6 +40,7 @@ export class OutputMapComponent implements OnInit {
     if (!this.map) {
       this.map = L.map(this.mapElement.nativeElement, {
         crs: L.CRS.Simple,
+        renderer: L.svg({ padding: 12 }),
         maxZoom: configuration.max_zoom,
         minZoom: configuration.min_zoom,
         maxBounds: [[-configuration.dim * 2, -configuration.dim], [configuration.dim, configuration.dim * 2]],

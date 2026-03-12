@@ -6,10 +6,17 @@ import { GridItem } from '../datatypes';
 export class NormalityLayer {
     layer: L.GeoJSON<any> = null;
     _grid: GridItem[] = [];
+    private _renderer: any = null;
 
     constructor(private map: L.Map, private grid: Observable<any[]>) {
         this.map.createPane('normality');
         this.map.getPane('normality').style.zIndex = '10';
+        // pane: 'normality' on a GeoJSON layer triggers Leaflet to auto-create
+        // a pane renderer with the default padding of 0.1 (10%), which causes
+        // severe clipping during zoom-out animations. Use an intentionally
+        // oversized renderer so the clip edge stays far outside the animated
+        // viewport even during large zoom-and-pan moves.
+        this._renderer = (L.svg as any)({ padding: 500, pane: 'normality' });
         this.grid.subscribe(grid => {
             this._grid = grid;
             this.refresh();
@@ -61,7 +68,9 @@ export class NormalityLayer {
                 stroke: false,
                 fillOpacity: 1  
             },
+            renderer: this._renderer,
+            noClip: true,
             pane: 'normality'
-        }).addTo(this.map);  
+        } as any).addTo(this.map);  
     }
 }
