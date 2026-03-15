@@ -7,7 +7,8 @@
     flex-flow: row;
     position: relative;
     overflow: hidden;
-    > * {
+    > app-installation-card-container,
+    > .map {
         flex: 0 0 50%;
         height: 100%;
         position: relative;
@@ -58,13 +59,38 @@
             opacity: 0;
         }   
     }
+
+    // 2400×1920 — scale factor 10/9 applied to all X-axis card offsets
+    @media screen and (min-width: 2400px) {
+        width: 2400px;
+        .map {
+            width: 3600px; // 2400px × 1.5
+        }
+        ::ng-deep {
+            .card-position-0 { transform: translate(194px, -900px)rotate(0deg); }
+            .card-position-1 { transform: translate(194px, 48px)rotate(0deg); }
+            .card-position-2 { transform: translate(369px, 488px)rotate(3.66deg); }
+            .card-position-3 { transform: translate(12px, 1012px)rotate(-4.8deg); }
+            .card-position-4 { transform: translate(322px, 1321px)rotate(-3.38deg); }
+            .card-position-5 { transform: translate(69px, 1482px)rotate(4.66deg); }
+            .card-position-6 { transform: translate(53px, 2000px)rotate(0deg); }
+        }
+    }
 }
 
 .map app-lessmore {
-    left: 33%;
+    left: 34%;
     right: auto !important;
 }
 
-.qr-code{
-    left: 1984px;
+// QR code is a direct child of :host (outside .map) so right/bottom positioning
+// is relative to the visible screen, not the overflowing map div.
+.qr-code {
+    width: 120px;
+    height: 120px;
+    background-size: 88px 94px;
+    left: auto;
+    right: 16px;
+    bottom: 16px;
+    z-index: 10;
 }

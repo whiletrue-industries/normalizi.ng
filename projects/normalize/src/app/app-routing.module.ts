@@ -12,6 +12,7 @@ const routes: Routes = [
   {path: 'game', component: GameComponent},
   {path: 'dataset-uploader', component: DatasetComponent},
   {path: 'selfie', component: SelfieComponent},
+  {path: 'outout/v', redirectTo: 'output/v', pathMatch: 'full'},
   {path: 'output/v', component: InstallationVComponent},
   {path: 'output/h', component: InstallationHComponent},
   {path: '', component: MapComponent},
