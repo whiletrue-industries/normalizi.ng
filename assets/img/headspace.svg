@@ -1,0 +1,19 @@
+<svg width="194" height="291" viewBox="0 0 194 291" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g style="mix-blend-mode:lighten" filter="url(#filter0_d)">
+<text x='97' y='60'>{{countdownText}}</text>
+</g>
+<defs>
+<filter id="filter0_d" x="0" y="0" width="193.042" height="290.026" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"/>
+<feOffset/>
+<feGaussianBlur stdDeviation="8"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.02 0 0 0 0 1 0 0 0 0 0 0 0 0 1 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
+</filter>
+<clipPath id="clip0">
+<path d="M16.0289 96.5C16.0361 52.0411 52.0831 16.0059 96.542 16.0131C141.001 16.0203 177.036 52.0672 177.029 96.5261L177.013 193.526C177.006 237.985 140.959 274.02 96.5001 274.013C52.0412 274.006 16.006 237.959 16.0132 193.5L16.0289 96.5Z" fill="white"/>
+</clipPath>
+</defs>
+</svg>
