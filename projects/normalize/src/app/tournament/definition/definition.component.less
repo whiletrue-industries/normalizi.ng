@@ -36,8 +36,9 @@
     align-items: center;
     justify-content: flex-start;
     background-color: @color-dark-brown;
-    z-index: 3;
+    z-index: 5;
     padding: 32px 0;
+    pointer-events: none;
 
     .def {
         flex: 1 0 50%;
@@ -54,13 +55,38 @@
     }
 
     .okay {
-        background-image: url('../../../assets/img/next-button.svg');
-        background-size: contain;
-        background-position: center;
-        background-repeat: no-repeat;
         margin-top: auto;
         cursor: pointer;
         width: 56px;
         height: 56px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        pointer-events: auto;
+
+        svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .echo-ring,
+        .countdown-ring {
+            fill: none;
+        }
+
+        .echo-ring {
+            stroke: #EAE7DF;
+            opacity: 0.2;
+            stroke-width: 1;
+        }
+
+        .countdown-ring {
+            stroke: #FFFFFF;
+            stroke-width: 2.5;
+            transform: rotate(-90deg);
+            transform-origin: center;
+            transition: stroke-dashoffset 16ms linear;
+        }
     }
 }
