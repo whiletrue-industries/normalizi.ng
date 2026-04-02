@@ -1,6 +1,16 @@
 <div class='prompts'>
-  <p>{{prompts[0]}}</p>
-  <p>{{prompts[1]}}</p>
+  @if (outgoingPrompts) {
+    <div class='prompt-group prompt-outgoing'>
+      <p>{{outgoingPrompts[0]}}</p>
+      <p>{{outgoingPrompts[1]}}</p>
+    </div>
+  }
+  @if (!outgoingPrompts || incomingPromptVisible) {
+    <div class='prompt-group' [class.prompt-incoming]='incomingPromptVisible'>
+      <p>{{prompts[0]}}</p>
+      <p>{{prompts[1]}}</p>
+    </div>
+  }
 </div>
 <div class='video'>
   <video #inputVideo [autoplay]='true' [muted]='true' [volume]='0' playsinline

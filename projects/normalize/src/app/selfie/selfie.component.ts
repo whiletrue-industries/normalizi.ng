@@ -51,7 +51,11 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   public distance = '';
   public maskOverlayTransform = 'scale(1)';
   public prompts = PROMPTS.getting_ready;
+  public outgoingPrompts: string[] | null = null;
+  public incomingPromptVisible = false;
   public promptsStream = new Subject<string[]>();
+  private promptOutTimeout: ReturnType<typeof setTimeout> | null = null;
+  private promptInTimeout: ReturnType<typeof setTimeout> | null = null;
 
   public svgHack = false;
   public _allowed = false;
@@ -63,10 +67,35 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(private faceProcessor: FaceProcessorService, private api: ApiService, private state: StateService,
               private router: Router, private el: ElementRef) {
       this.promptsStream.pipe(
-        throttleTime(500),
+        throttleTime(250),
       ).subscribe((prompts) => {
-        this.prompts = prompts;
+        this.transitionPrompts(prompts);
       });
+  }
+
+  private transitionPrompts(nextPrompts: string[]) {
+    if (this.prompts[0] === nextPrompts[0] && this.prompts[1] === nextPrompts[1]) {
+      return;
+    }
+
+    if (this.promptOutTimeout) {
+      clearTimeout(this.promptOutTimeout);
+      this.promptOutTimeout = null;
+    }
+
+    if (this.promptInTimeout) {
+      clearTimeout(this.promptInTimeout);
+      this.promptInTimeout = null;
+    }
+
+    this.outgoingPrompts = this.prompts;
+    this.prompts = nextPrompts;
+    this.incomingPromptVisible = true;
+    this.promptOutTimeout = setTimeout(() => {
+      this.outgoingPrompts = null;
+      this.incomingPromptVisible = false;
+      this.promptOutTimeout = null;
+    }, 500);
   }
 
   ngOnInit(): void { 
@@ -311,6 +340,14 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy() {
     this.stopCaptureCountdown();
+    if (this.promptOutTimeout) {
+      clearTimeout(this.promptOutTimeout);
+      this.promptOutTimeout = null;
+    }
+    if (this.promptInTimeout) {
+      clearTimeout(this.promptInTimeout);
+      this.promptInTimeout = null;
+    }
   }
 
 }

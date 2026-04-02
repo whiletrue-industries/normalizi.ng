@@ -13,29 +13,45 @@
 
     .prompts {
         position: absolute;
-        top: 0;
+        bottom: 106px;
         z-index: 1;
         left: 0;
         right: 0;
-        padding-top: 32px;
-        background: linear-gradient(180deg, rgba(0, 0, 0, 0.3) 48.96%, rgba(0, 0, 0, 0) 100%);
+        min-height: 56px;
+        pointer-events: none;
 
-        p {
-            .font-source-sans;
-            font-style: normal;
-            font-size: 20px;
-            line-height: 25px;
-            color: #FFFFFF;
-            margin: 0;
-            text-align: center;
+        .prompt-group {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            opacity: 1;
+
+            p {
+                .font-source-sans;
+                font-style: normal;
+                font-size: 20px;
+                line-height: 25px;
+                color: #FFFFFF;
+                margin: 0;
+                text-align: center;
+            }
+
+            p:first-child {
+                font-weight: normal;
+            }
+
+            p:last-child {
+                font-weight: bold;
+            }
         }
 
-        p:first-child {
-            font-weight: normal;
+        .prompt-incoming {
+            animation: prompt-incoming 500ms ease-in;
         }
 
-        p:last-child {
-            font-weight: bold;            
+        .prompt-outgoing {
+            animation: prompt-outgoing 500ms ease-out forwards;
         }
     }
 
@@ -222,6 +238,30 @@
     //     flex-flow: row wrap;
     //     justify-content: center;
     // }
+}
+
+@keyframes prompt-incoming {
+    from {
+        opacity: 0;
+        transform: translateX(-40px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes prompt-outgoing {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(40px);
+    }
 }
 
 @keyframes flash-animation {
