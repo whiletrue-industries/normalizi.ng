@@ -39,9 +39,16 @@
   }
 </div>
 @if (detected) {
-  <div class='shutter' [class.allowed]='allowed'
-    (touchstart)='setAllowed($event, true)'
-  ></div>
+  <button class='shutter' type='button' aria-label='Capture' (touchstart)='setAllowed($event, true)' (click)='setAllowed($event, true)'>
+    <svg viewBox='0 0 72 72' aria-hidden='true' focusable='false'>
+      <circle cx='36' cy='36' r='26' fill='white'></circle>
+      <circle class='echo-ring' cx='36' cy='36' r='30'></circle>
+      <circle class='countdown-ring' cx='36' cy='36' r='30'
+        [attr.stroke-dasharray]='captureButtonRingLength + " " + captureButtonRingLength'
+        [attr.stroke-dashoffset]='captureButtonRingOffset'
+      ></circle>
+    </svg>
+  </button>
 }
 @if (svgHack) {
   <div class='flash' [class.active]='flashActive'></div>

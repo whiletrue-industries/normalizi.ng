@@ -146,12 +146,38 @@
         right: 0;
         height: 124px;
         user-select: none;
-        background-image: url('../../assets/img/camera-button.svg'), linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.5) 48.96%);
-        &.allowed {
-            background-image: url('../../assets/img/camera-button-allowed.svg'), linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.5) 48.96%);
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.5) 48.96%);
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding-bottom: 14px;
+        border: none;
+        cursor: pointer;
+
+        svg {
+            width: 72px;
+            height: 72px;
+            display: block;
         }
-        background-repeat: no-repeat;
-        background-position: center;
+
+        .echo-ring,
+        .countdown-ring {
+            fill: none;
+        }
+
+        .echo-ring {
+            stroke: #FFFFFF;
+            opacity: 0.2;
+            stroke-width: 3;
+        }
+
+        .countdown-ring {
+            stroke: #FFFFFF;
+            stroke-width: 3;
+            transform: rotate(-90deg);
+            transform-origin: center;
+            transition: stroke-dashoffset 16ms linear;
+        }
     }
 
     .flash {

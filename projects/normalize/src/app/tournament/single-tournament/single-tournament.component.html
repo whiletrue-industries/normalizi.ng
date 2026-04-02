@@ -16,7 +16,7 @@
 }
 <ng-content></ng-content>
 <div class='texts'>
-  <span [style.opacity]='1-position'>Swipe the side that looks</span>
+  <span [style.opacity]='1-position'>Tap the side that looks</span>
   <span ><strong>more normal</strong></span>
 </div>
 <app-slider [state]='state' [extraHandles]='extraHandles' (location)='location = $event' (selected)='finish($event)'></app-slider>

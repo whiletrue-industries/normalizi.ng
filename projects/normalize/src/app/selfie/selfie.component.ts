@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { defer, from, fromEvent, interval, ReplaySubject, Subject, Subscription } from 'rxjs';
 import { ConfigService } from '../config.service';
 import { debounceTime, delay, filter, first, map, switchMap, take, tap, throttleTime } from 'rxjs/operators';
@@ -24,7 +24,7 @@ const PROMPTS = {
     styleUrls: ['./selfie.component.less'],
     standalone: false
 })
-export class SelfieComponent implements OnInit, AfterViewInit {
+export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   
   @ViewChild('inputVideo') inputVideo: ElementRef;
 
@@ -32,6 +32,8 @@ export class SelfieComponent implements OnInit, AfterViewInit {
   private completed = new ReplaySubject(1);
   public canStart = new ReplaySubject(1);
   private countdown: Subscription = null;
+  private captureAnimationFrameId: number | null = null;
+  private captureCountdownStart: number | null = null;
 
   public flashActive = false;
   public countdownText = '';
@@ -53,6 +55,9 @@ export class SelfieComponent implements OnInit, AfterViewInit {
 
   public svgHack = false;
   public _allowed = false;
+  readonly captureTimeoutMs = 10000;
+  readonly captureButtonRingLength = 188.5;
+  public captureButtonRingOffset = 0;
 
 
   constructor(private faceProcessor: FaceProcessorService, private api: ApiService, private state: StateService,
@@ -162,12 +167,16 @@ export class SelfieComponent implements OnInit, AfterViewInit {
           this.scale = (event.scale as Number).toFixed(2);;
           this.detected = event.snapped;
           if (event.snapped) {
+            if (!this._allowed && this.captureAnimationFrameId === null) {
+              this.startCaptureCountdown();
+            }
             if (this._allowed) {
               this.promptsStream.next(PROMPTS.hold_still2);    
             } else {
               this.promptsStream.next(PROMPTS.hold_still);
             }
           } else {
+            this.stopCaptureCountdown();
             setTimeout(() => {
               if (event.problem) {
                 this.promptsStream.next(PROMPTS[event.problem]);
@@ -230,19 +239,61 @@ export class SelfieComponent implements OnInit, AfterViewInit {
   }
 
   setAllowed(event, value) {
-    let e: Event = event || window.event;
-    e.preventDefault && e.preventDefault();
-    e.stopPropagation && e.stopPropagation();
-    e.cancelBubble = true;
-    e.returnValue = false;
+    const e: any = event || (window as any).event;
+    if (e) {
+      e.preventDefault && e.preventDefault();
+      e.stopPropagation && e.stopPropagation();
+      e.cancelBubble = true;
+      e.returnValue = false;
+    }
+    this.stopCaptureCountdown();
     this.allowed = value;
     return false;
+  }
+
+  private startCaptureCountdown() {
+    this.stopCaptureCountdown();
+    this.captureButtonRingOffset = 0;
+    this.captureCountdownStart = null;
+    this.captureAnimationFrameId = requestAnimationFrame((timestamp) => this.tickCaptureCountdown(timestamp));
+  }
+
+  private stopCaptureCountdown() {
+    if (this.captureAnimationFrameId !== null) {
+      cancelAnimationFrame(this.captureAnimationFrameId);
+      this.captureAnimationFrameId = null;
+    }
+    this.captureCountdownStart = null;
+    this.captureButtonRingOffset = 0;
+  }
+
+  private tickCaptureCountdown(timestamp: number) {
+    if (!this.detected || this._allowed) {
+      this.stopCaptureCountdown();
+      return;
+    }
+
+    if (this.captureCountdownStart === null) {
+      this.captureCountdownStart = timestamp;
+    }
+
+    const elapsed = timestamp - this.captureCountdownStart;
+    const progress = Math.min(elapsed / this.captureTimeoutMs, 1);
+    this.captureButtonRingOffset = this.captureButtonRingLength * progress;
+
+    if (progress >= 1) {
+      this.setAllowed(null, true);
+      return;
+    }
+
+    this.captureAnimationFrameId = requestAnimationFrame((nextTimestamp) => this.tickCaptureCountdown(nextTimestamp));
   }
 
   set allowed(value) {
     console.log('ALLOWED=', value);
     this._allowed = value;
     this.faceProcessor.allowed = value;
+    this.stopCaptureCountdown();
     if (value) {
       if (this.prompts === PROMPTS.hold_still) {
         this.promptsStream.next(PROMPTS.hold_still2);
@@ -256,6 +307,10 @@ export class SelfieComponent implements OnInit, AfterViewInit {
 
   get allowed() {
     return this._allowed;
+  }
+
+  ngOnDestroy() {
+    this.stopCaptureCountdown();
   }
 
 }

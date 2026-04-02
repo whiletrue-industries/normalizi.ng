@@ -1,6 +1,16 @@
 <div class='wrapper'>
   <div class='def' [style.background-image]="'url(/assets/img/' + imgSrc + ')'"></div>
-  <div class='okay'></div>
+  <button class='okay' type='button' aria-label='Skip' (click)='onclose()' (touchend)='onclose(); $event.preventDefault()'>
+    <svg viewBox='0 0 56 56' aria-hidden='true' focusable='false'>
+      <circle cx='28' cy='28' r='24' fill='#2D2C29'></circle>
+      <path d='M29 35.75L36.5 28.25M36.5 28.25L29 20.75M36.5 28.25L20 28.25' stroke='#BFBDB6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'></path>
+      <circle class='echo-ring' cx='28' cy='28' r='24.5'></circle>
+      <circle class='countdown-ring' cx='28' cy='28' r='24.5'
+        [attr.stroke-dasharray]='buttonRingLength + " " + buttonRingLength'
+        [attr.stroke-dashoffset]='buttonRingOffset'
+      ></circle>
+    </svg>
+  </button>
 </div>
 @if (visible) {
   <a class='overlay' (click)='onclose()' (touchend)='onclose()'></a>
