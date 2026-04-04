@@ -1,7 +1,7 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { defer, from, fromEvent, interval, ReplaySubject, Subject, Subscription } from 'rxjs';
+import { animationFrameScheduler, defer, from, fromEvent, interval, ReplaySubject, Subject, Subscription } from 'rxjs';
 import { ConfigService } from '../config.service';
-import { debounceTime, delay, filter, first, map, switchMap, take, tap, throttleTime } from 'rxjs/operators';
+import { debounceTime, delay, filter, first, map, switchMap, take, takeWhile, tap, throttleTime } from 'rxjs/operators';
 import { FaceProcessorService } from '../face-processor.service';
 import { ApiService } from '../api.service';
 import { StateService } from '../state.service';
@@ -33,8 +33,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   private completed = new ReplaySubject(1);
   public canStart = new ReplaySubject(1);
   private countdown: Subscription = null;
-  private captureAnimationFrameId: number | null = null;
-  private captureCountdownStart: number | null = null;
+  private captureCountdownSubscription: Subscription | null = null;
 
   public flashActive = false;
   public countdownText = '';
@@ -197,7 +196,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
           this.scale = (event.scale as Number).toFixed(2);;
           this.detected = event.snapped;
           if (event.snapped) {
-            if (!this._allowed && this.captureAnimationFrameId === null) {
+            if (!this._allowed && this.captureCountdownSubscription === null) {
               this.startCaptureCountdown();
             }
             if (this._allowed) {
@@ -284,39 +283,28 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   private startCaptureCountdown() {
     this.stopCaptureCountdown();
     this.captureButtonRingOffset = 0;
-    this.captureCountdownStart = null;
-    this.captureAnimationFrameId = requestAnimationFrame((timestamp) => this.tickCaptureCountdown(timestamp));
+    const startTime = animationFrameScheduler.now();
+    this.captureCountdownSubscription = interval(0, animationFrameScheduler).pipe(
+      map(() => Math.min((animationFrameScheduler.now() - startTime) / this.captureTimeoutMs, 1)),
+      takeWhile(progress => progress < 1, true),
+    ).subscribe(progress => {
+      if (!this.detected || this._allowed) {
+        this.stopCaptureCountdown();
+        return;
+      }
+      this.captureButtonRingOffset = this.captureButtonRingLength * progress;
+      if (progress >= 1) {
+        this.setAllowed(null, true);
+      }
+    });
   }
 
   private stopCaptureCountdown() {
-    if (this.captureAnimationFrameId !== null) {
-      cancelAnimationFrame(this.captureAnimationFrameId);
-      this.captureAnimationFrameId = null;
+    if (this.captureCountdownSubscription !== null) {
+      this.captureCountdownSubscription.unsubscribe();
+      this.captureCountdownSubscription = null;
     }
-    this.captureCountdownStart = null;
     this.captureButtonRingOffset = 0;
-  }
-
-  private tickCaptureCountdown(timestamp: number) {
-    if (!this.detected || this._allowed) {
-      this.stopCaptureCountdown();
-      return;
-    }
-
-    if (this.captureCountdownStart === null) {
-      this.captureCountdownStart = timestamp;
-    }
-
-    const elapsed = timestamp - this.captureCountdownStart;
-    const progress = Math.min(elapsed / this.captureTimeoutMs, 1);
-    this.captureButtonRingOffset = this.captureButtonRingLength * progress;
-
-    if (progress >= 1) {
-      this.setAllowed(null, true);
-      return;
-    }
-
-    this.captureAnimationFrameId = requestAnimationFrame((nextTimestamp) => this.tickCaptureCountdown(nextTimestamp));
   }
 
   set allowed(value) {

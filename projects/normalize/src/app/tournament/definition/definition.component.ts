@@ -1,4 +1,6 @@
 import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { animationFrameScheduler, interval, Subscription } from 'rxjs';
+import { map, takeWhile } from 'rxjs/operators';
 
 @Component({
     selector: 'app-definition',
@@ -15,8 +17,7 @@ export class DefinitionComponent implements OnInit {
   readonly timeoutMs = 10000;
   readonly buttonRingLength = 153.94;
   buttonRingOffset = 0;
-  private animationFrameId: number | null = null;
-  private countdownStartTime: number | null = null;
+  private countdownSubscription: Subscription | null = null;
 
   @Input() imgSrc: string;
   @Output() closed = new EventEmitter<void>();
@@ -44,37 +45,23 @@ export class DefinitionComponent implements OnInit {
 
   private startCountdown() {
     this.buttonRingOffset = 0;
-    this.countdownStartTime = null;
-    this.animationFrameId = requestAnimationFrame((timestamp) => this.tickCountdown(timestamp));
+    const startTime = animationFrameScheduler.now();
+    this.countdownSubscription = interval(0, animationFrameScheduler).pipe(
+      map(() => Math.min((animationFrameScheduler.now() - startTime) / this.timeoutMs, 1)),
+      takeWhile(progress => progress < 1, true),
+    ).subscribe(progress => {
+      this.buttonRingOffset = this.buttonRingLength * progress;
+      if (progress >= 1) {
+        this.onclose();
+      }
+    });
   }
 
   private stopCountdown() {
-    if (this.animationFrameId !== null) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
+    if (this.countdownSubscription) {
+      this.countdownSubscription.unsubscribe();
+      this.countdownSubscription = null;
     }
-    this.countdownStartTime = null;
-  }
-
-  private tickCountdown(timestamp: number) {
-    if (!this.visible) {
-      return;
-    }
-
-    if (this.countdownStartTime === null) {
-      this.countdownStartTime = timestamp;
-    }
-
-    const elapsed = timestamp - this.countdownStartTime;
-    const progress = Math.min(elapsed / this.timeoutMs, 1);
-    this.buttonRingOffset = this.buttonRingLength * progress;
-
-    if (progress >= 1) {
-      this.onclose();
-      return;
-    }
-
-    this.animationFrameId = requestAnimationFrame((nextTimestamp) => this.tickCountdown(nextTimestamp));
   }
 
 }
