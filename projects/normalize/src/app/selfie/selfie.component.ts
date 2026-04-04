@@ -59,7 +59,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public svgHack = false;
   public _allowed = false;
-  readonly captureTimeoutMs = 10000;
+  readonly captureTimeoutMs = 5000;
   readonly captureButtonRingLength = 188.5;
   public captureButtonRingOffset = 0;
 
