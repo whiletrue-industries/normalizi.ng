@@ -45,6 +45,15 @@ export class OutputMapComponent implements OnInit {
         maxBounds: [[-configuration.dim * 2, -configuration.dim], [configuration.dim, configuration.dim * 2]],
         center: [-configuration.dim/2, configuration.dim/2],
         zoom: configuration.min_zoom + 2,
+        zoomAnimation: true,
+        fadeAnimation: true,
+        markerZoomAnimation: true,
+        inertia: true,
+        inertiaDeceleration: 1600,
+        inertiaMaxSpeed: 900,
+        easeLinearity: 0.12,
+        zoomSnap: 0.2,
+        zoomDelta: 0.5,
         zoomControl: false,
         attributionControl: false
       });
