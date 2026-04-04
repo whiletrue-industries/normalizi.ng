@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { animationFrameScheduler } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -36,7 +37,8 @@ export class AnimationManagerService {
   go() {
     if (!this.ticking) {
       this.ticking = true;
-      requestAnimationFrame((timestamp) => {
+      animationFrameScheduler.schedule(() => {
+        const timestamp = animationFrameScheduler.now();
         for (const key of Object.keys(this.handlers)) {
           if (this.enabled[key]) {
             this.handlers[key](timestamp);

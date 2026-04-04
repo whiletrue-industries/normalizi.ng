@@ -77,6 +77,14 @@ export class InstallationBase implements AfterViewInit, OnInit, OnDestroy {
             })
         ).subscribe((data) => {
             this.tsneOverlay.addImageLayer(data).subscribe((gi: GridItem) => {
+                const incomingId = gi && gi.item ? gi.item.id : null;
+                const currentTopId = this.items.length > 0 && this.items[0] && this.items[0].item ? this.items[0].item.id : null;
+
+                // Skip immediate duplicate cards so the output stream never shows the same card twice in a row.
+                if (incomingId !== null && currentTopId !== null && incomingId === currentTopId) {
+                    return;
+                }
+
                 if (this.items.length > 0) {
                     this.mapElement.normalityLayer.refresh();
                     const pos = this.items[0].pos;
@@ -123,6 +131,15 @@ export class InstallationBase implements AfterViewInit, OnInit, OnDestroy {
                         this.map.flyToBounds(bounds, params);
                     }, 3000);
                 }
+
+                // Keep each card unique in the visible stack.
+                if (incomingId !== null) {
+                    const existingIdx = this.items.findIndex((item) => item && item.item && item.item.id === incomingId);
+                    if (existingIdx !== -1) {
+                        this.items.splice(existingIdx, 1);
+                    }
+                }
+
                 this.items.unshift(gi);
                 if (this.items.length > 7) {
                     const removed = this.items.pop();

@@ -1,11 +1,12 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { defer, from, fromEvent, interval, ReplaySubject, Subject, Subscription } from 'rxjs';
+import { animationFrameScheduler, defer, from, fromEvent, interval, ReplaySubject, Subject, Subscription } from 'rxjs';
 import { ConfigService } from '../config.service';
-import { debounceTime, delay, filter, first, map, switchMap, take, tap, throttleTime } from 'rxjs/operators';
+import { debounceTime, delay, filter, first, map, switchMap, take, takeWhile, tap, throttleTime } from 'rxjs/operators';
 import { FaceProcessorService } from '../face-processor.service';
 import { ApiService } from '../api.service';
 import { StateService } from '../state.service';
 import { Router } from '@angular/router';
+import { debugLog } from '../logger';
 
 const PROMPTS = {
   initial: ['', ''],
@@ -36,8 +37,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   private completed = new ReplaySubject(1);
   public canStart = new ReplaySubject(1);
   private countdown: Subscription = null;
-  private captureAnimationFrameId: number | null = null;
-  private captureCountdownStart: number | null = null;
+  private captureCountdownSubscription: Subscription | null = null;
 
   public flashActive = false;
   public countdownText = '';
@@ -128,14 +128,14 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     defer(async () => this.init()).subscribe(() => {
-      console.log('initialized');
+      debugLog('initialized');
     });
   }
 
   async init() {
     const videoEl: HTMLVideoElement = this.inputVideo.nativeElement;
     const supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
-    console.log('SUPPORTED', JSON.stringify(supportedConstraints));
+    debugLog('SUPPORTED', JSON.stringify(supportedConstraints));
     const strictConstraints: MediaTrackConstraints = {};
     if (supportedConstraints.facingMode) {
       strictConstraints.facingMode = { exact: 'user' };
@@ -173,7 +173,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
       { video: true },
     ];
 
-    console.log('CONSTRAINT ATTEMPTS', attempts.map((a) => a.video));
+    debugLog('CONSTRAINT ATTEMPTS', attempts.map((a) => a.video));
 
     let lastError: unknown = null;
     for (const attempt of attempts) {
@@ -189,7 +189,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
       throw lastError;
     }
     const videoTrack = this.videoStream.getVideoTracks()[0];
-    console.log('STREAM SIZE', videoTrack.getSettings().width, videoTrack.getSettings().height);
+    debugLog('STREAM SIZE', videoTrack.getSettings().width, videoTrack.getSettings().height);
 
     videoEl.srcObject = this.videoStream;
     fromEvent(videoEl, 'play').pipe(
@@ -216,26 +216,26 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
         this.maskOverlayScale = videoEl.offsetHeight * 0.675 / 254 * this.faceProcessor.defaultScale;
         this.maskOverlayTransform = `scale(${this.maskOverlayScale})`;
         // this.maskOverlayTransform = `scale(${videoEl.offsetHeight * 0.675 / 254})`;
-        console.log('RETURNING CAN START');
+        debugLog('RETURNING CAN START');
         return this.canStart;
       }),
       tap(() => {
-        console.log('CAN START TRIGGERED');
+        debugLog('CAN START TRIGGERED');
         this.triggerDetectFaces();
       })
     ).subscribe(() => {
-        console.log('DETECTING FACES...');
+        debugLog('DETECTING FACES...');
     });
   }
 
   triggerDetectFaces() {
     const videoEl: HTMLVideoElement = this.inputVideo.nativeElement;
-    console.log('DETECTING FACES...');
+    debugLog('DETECTING FACES...');
     this.faceProcessor.processFaces(videoEl, 5)
       .subscribe((event) => {
         // console.log('EVENT', event);
         if (event.kind === 'start') {
-          console.log('STARTED!');
+          debugLog('STARTED!');
           this.prompts = PROMPTS.no_detection;
           this.started = true;
           this.faceOffsetX = 0;
@@ -265,7 +265,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
             this.animateRingsToCenter(false);
           }
           if (event.snapped) {
-            if (!this._allowed && this.captureAnimationFrameId === null) {
+            if (!this._allowed && this.captureCountdownSubscription === null) {
               this.startCaptureCountdown();
             }
             if (this._allowed) {
@@ -301,7 +301,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
             .pipe(
               tap((result: any) => {
                 if (result.success) {
-                  console.log('SETTING OWN INFO', result);
+                  debugLog('SETTING OWN INFO', result);
                   this.state.setOwnInfo(result);
                 }
               })
@@ -312,7 +312,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
             this.completed.next();
           });
           this.completed.pipe(first()).subscribe(() => {
-            console.log('completed');
+            debugLog('completed');
             (this.inputVideo.nativeElement as HTMLVideoElement).remove();
             this.videoStream.getVideoTracks()[0].stop();
             if (this.state.getPlayed()) {
@@ -352,43 +352,32 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   private startCaptureCountdown() {
     this.stopCaptureCountdown();
     this.captureButtonRingOffset = 0;
-    this.captureCountdownStart = null;
-    this.captureAnimationFrameId = requestAnimationFrame((timestamp) => this.tickCaptureCountdown(timestamp));
+    const startTime = animationFrameScheduler.now();
+    this.captureCountdownSubscription = interval(0, animationFrameScheduler).pipe(
+      map(() => Math.min((animationFrameScheduler.now() - startTime) / this.captureTimeoutMs, 1)),
+      takeWhile(progress => progress < 1, true),
+    ).subscribe(progress => {
+      if (!this.detected || this._allowed) {
+        this.stopCaptureCountdown();
+        return;
+      }
+      this.captureButtonRingOffset = this.captureButtonRingLength * progress;
+      if (progress >= 1) {
+        this.setAllowed(null, true);
+      }
+    });
   }
 
   private stopCaptureCountdown() {
-    if (this.captureAnimationFrameId !== null) {
-      cancelAnimationFrame(this.captureAnimationFrameId);
-      this.captureAnimationFrameId = null;
+    if (this.captureCountdownSubscription !== null) {
+      this.captureCountdownSubscription.unsubscribe();
+      this.captureCountdownSubscription = null;
     }
-    this.captureCountdownStart = null;
     this.captureButtonRingOffset = 0;
   }
 
-  private tickCaptureCountdown(timestamp: number) {
-    if (!this.detected || this._allowed) {
-      this.stopCaptureCountdown();
-      return;
-    }
-
-    if (this.captureCountdownStart === null) {
-      this.captureCountdownStart = timestamp;
-    }
-
-    const elapsed = timestamp - this.captureCountdownStart;
-    const progress = Math.min(elapsed / this.captureTimeoutMs, 1);
-    this.captureButtonRingOffset = this.captureButtonRingLength * progress;
-
-    if (progress >= 1) {
-      this.setAllowed(null, true);
-      return;
-    }
-
-    this.captureAnimationFrameId = requestAnimationFrame((nextTimestamp) => this.tickCaptureCountdown(nextTimestamp));
-  }
-
   set allowed(value) {
-    console.log('ALLOWED=', value);
+    debugLog('ALLOWED=', value);
     this._allowed = value;
     this.faceProcessor.allowed = value;
     this.stopCaptureCountdown();
