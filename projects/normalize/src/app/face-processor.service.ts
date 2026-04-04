@@ -175,6 +175,9 @@ export class FaceProcessorService {
         //   scale = 1;
         // }
         const distance = Math.sqrt((center.x - canvas.width*0.5)**2 + (center.y - canvas.height*0.6)**2);
+        // Mirror X to match the selfie UI's horizontal flip.
+        const faceOffsetX = -(center.x - canvas.width / 2) * ratio;
+        const faceOffsetY = (center.y - canvas.height / 2) * ratio;
   
         const snapRatio = snapped ? 2 : 1;
         let problem = null;
@@ -214,6 +217,8 @@ export class FaceProcessorService {
             maskTransform: `translate(${canvas.width/2 * ratio}px,${canvas.height/2 * ratio}px)rotate(0rad)scale(${magnification*this.defaultScale})`,
             kind: 'transform',
             snapped: true,
+            faceOffsetX,
+            faceOffsetY,
             orientation, scale, distance: distance / canvas.height,
           });
           const ret = detectSingleFace(canvas, this.detectorOptions).withFaceLandmarks(this.config.TINY).withFaceDescriptor();
@@ -230,6 +235,8 @@ export class FaceProcessorService {
             maskTransform: `translate(${topPoint.x * ratio}px,${topPoint.y * ratio}px)rotate(${-rotation}rad)scale(${magnification*this.defaultScale})`,
             kind: 'transform',
             snapped: false,
+            faceOffsetX,
+            faceOffsetY,
             orientation, scale, distance: distance / canvas.height,
             problem: problem
           });
