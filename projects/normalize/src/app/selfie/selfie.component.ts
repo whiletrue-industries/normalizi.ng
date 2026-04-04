@@ -43,7 +43,6 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   public detected = false;
   public src = '';
   public transform = '';
-  public maskTransform = '';
   public transformOrigin = '';
   public faceOffsetX = 0;
   public faceOffsetY = 0;
@@ -51,6 +50,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   public maskOverlayScale = 1;
   public showDynamicRings = false;
   public showConfirmedOverlay = false;
+  public dynamicRingsConfirmed = false;
 
   public orientation = '';
   public scale = '';
@@ -236,10 +236,10 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
           this.faceInFrame = false;
           this.showDynamicRings = false;
           this.showConfirmedOverlay = false;
+          this.dynamicRingsConfirmed = false;
         } else if (event.kind === 'transform') {
           this.transform = event.transform;
           this.transformOrigin = event.transformOrigin;
-          this.maskTransform = event.maskTransform;
           const faceInFrame = event.faceOffsetX !== undefined;
           const faceOffsetX = Number.isFinite(event.faceOffsetX) ? event.faceOffsetX : 0;
           const faceOffsetY = Number.isFinite(event.faceOffsetY) ? event.faceOffsetY : 0;
@@ -413,6 +413,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   private animateRingsFromCenter(targetX: number, targetY: number) {
     this.cancelRingTimers();
     this.showConfirmedOverlay = false;
+    this.dynamicRingsConfirmed = false;
 
     if (!this.showDynamicRings) {
       this.showDynamicRings = true;
@@ -432,6 +433,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private animateRingsToCenter(showConfirmedOverlay: boolean) {
     this.cancelRingTimers();
+    this.dynamicRingsConfirmed = showConfirmedOverlay;
 
     if (!this.showDynamicRings) {
       this.showConfirmedOverlay = showConfirmedOverlay;
@@ -445,6 +447,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
     this.ringHideTimeout = setTimeout(() => {
       this.showDynamicRings = false;
       this.showConfirmedOverlay = showConfirmedOverlay;
+      this.dynamicRingsConfirmed = false;
       this.ringHideTimeout = null;
     }, this.ringTransitionMs);
   }
