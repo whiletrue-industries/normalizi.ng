@@ -56,6 +56,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   public showConfirmedOverlay = false;
   public dynamicRingsConfirmed = false;
   public readonly disableRingFiltersOnMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent);
+  public faceScale = 1;
 
   public orientation = '';
   public scale = '';
@@ -243,6 +244,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
           this.showDynamicRings = false;
           this.showConfirmedOverlay = false;
           this.dynamicRingsConfirmed = false;
+          this.faceScale = 1;
         } else if (event.kind === 'transform') {
           this.transform = event.transform;
           this.transformOrigin = event.transformOrigin;
@@ -253,6 +255,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
           this.distance = (event.distance as Number).toFixed(2);
           this.orientation = (event.orientation as Number).toFixed(1);;
           this.scale = (event.scale as Number).toFixed(2);;
+          this.faceScale = Number.isFinite(event.scale) ? event.scale : 1;
           this.detected = event.snapped;
           if (event.snapped) {
             this.animateRingsToCenter(true);
@@ -464,6 +467,14 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
     const x = (-this.faceOffsetX / this.maskOverlayScale) * influence;
     const y = (this.faceOffsetY / this.maskOverlayScale) * influence;
     return `translate(${x}px, ${y}px)`;
+  }
+
+  centerRingTransform(influence: number): string {
+    const x = (-this.faceOffsetX / this.maskOverlayScale) * influence;
+    const y = (this.faceOffsetY / this.maskOverlayScale) * influence;
+    const targetScale = 1 / Math.max(this.faceScale, 0.001);
+    const clampedScale = this.detected ? 1 : Math.max(0.7, Math.min(1.45, targetScale));
+    return `translate(${x}px, ${y}px) scale(${clampedScale})`;
   }
 
   get ringFilterAttr(): string | null {
