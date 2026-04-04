@@ -15,6 +15,7 @@ import { TSNEOverlay } from './tsne-overlay';
 import { FaceApiService } from '../face-api.service';
 import { EmailModalComponent } from './email-modal/email-modal.component';
 import { OutputMapComponent } from '../output-map/output-map.component';
+import { debugLog } from '../logger';
 
 @Component({
     selector: 'app-map',
@@ -81,13 +82,13 @@ export class MapComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    console.log('HAS SELFIE', this.state.imageID, this.state.descriptor);
+    debugLog('HAS SELFIE', this.state.imageID, this.state.descriptor);
     setTimeout(() => {
       this.hasSelfie = this.state.imageID || this.state.descriptor;
     }, 0);
     let start = this.state.gallery ? from([false]) : from([true]);
     this.state.needsEmail.subscribe(() => {
-      console.log('NEEDS EMAIL');
+      debugLog('NEEDS EMAIL');
       this.definition = true;
       if (this.state.getOwnItemID() && !this.state.getAskedForEmail()) {
         this.emailModalOpen = true;
@@ -113,7 +114,7 @@ export class MapComponent implements OnInit, AfterViewInit {
       }
     });
     if (!this.state.getNeedsEmail()) {
-      console.log('DOESNT NEED EMAIL');
+      debugLog('DOESNT NEED EMAIL');
       this.definitionClosed.next();
       if (this.state.gallery) {
         this.router.navigate(['/selfie']);
@@ -122,7 +123,7 @@ export class MapComponent implements OnInit, AfterViewInit {
     start.pipe(
       filter((el) => !!el),
       switchMap(() => {
-        console.log('WAITING FOR READY');
+        debugLog('WAITING FOR READY');
         return this.ready;
       }),
       tap(() => { // SET UP MAP
@@ -260,7 +261,7 @@ export class MapComponent implements OnInit, AfterViewInit {
         this.grid.next(this.configuration.grid);
       })
     ).subscribe(() => {
-      console.log('FINISHED VIEW INIT');
+      debugLog('FINISHED VIEW INIT');
     });
   }
 

@@ -4,6 +4,7 @@
 
 export const environment = {
   production: false,
+  debug: false,
   endpoints: {
     new: 'https://europe-west3-normalize-us.cloudfunctions.net/upload-selfie',
     getGame: 'https://europe-west3-normalize-us.cloudfunctions.net/get-game',

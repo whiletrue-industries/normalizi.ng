@@ -6,6 +6,7 @@ import { FaceProcessorService } from '../face-processor.service';
 import { ApiService } from '../api.service';
 import { StateService } from '../state.service';
 import { Router } from '@angular/router';
+import { debugLog } from '../logger';
 
 const PROMPTS = {
   initial: ['', ''],
@@ -113,19 +114,19 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     defer(async () => this.init()).subscribe(() => {
-      console.log('initialized');
+      debugLog('initialized');
     });
   }
 
   async init() {
     const videoEl: HTMLVideoElement = this.inputVideo.nativeElement;
     const supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
-    console.log('SUPPORTED', JSON.stringify(supportedConstraints));
+    debugLog('SUPPORTED', JSON.stringify(supportedConstraints));
     const videoConstraints: any = {};
     if (supportedConstraints.facingMode) { videoConstraints.facingMode = {exact: 'user'}; }
     if (supportedConstraints.height) { videoConstraints.height = {min: 960}; }
     if (supportedConstraints.width) { videoConstraints.width = {min: 540}; }
-    console.log('CONSTRAINTS', JSON.stringify(supportedConstraints));
+    debugLog('CONSTRAINTS', JSON.stringify(supportedConstraints));
     try {
       this.videoStream = await navigator.mediaDevices
         .getUserMedia({
@@ -139,7 +140,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
           video: videoConstraints,
         });
     }
-    console.log('STREAM SIZE', this.videoStream.getVideoTracks()[0].getSettings().width, this.videoStream.getVideoTracks()[0].getSettings().height);
+    debugLog('STREAM SIZE', this.videoStream.getVideoTracks()[0].getSettings().width, this.videoStream.getVideoTracks()[0].getSettings().height);
 
     videoEl.srcObject = this.videoStream;
     fromEvent(videoEl, 'play').pipe(
@@ -165,26 +166,26 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
         );
         this.maskOverlayTransform = `scale(${videoEl.offsetHeight * 0.675 / 254 * this.faceProcessor.defaultScale})`;
         // this.maskOverlayTransform = `scale(${videoEl.offsetHeight * 0.675 / 254})`;
-        console.log('RETURNING CAN START');
+        debugLog('RETURNING CAN START');
         return this.canStart;
       }),
       tap(() => {
-        console.log('CAN START TRIGGERED');
+        debugLog('CAN START TRIGGERED');
         this.triggerDetectFaces();
       })
     ).subscribe(() => {
-        console.log('DETECTING FACES...');
+        debugLog('DETECTING FACES...');
     });
   }
 
   triggerDetectFaces() {
     const videoEl: HTMLVideoElement = this.inputVideo.nativeElement;
-    console.log('DETECTING FACES...');
+    debugLog('DETECTING FACES...');
     this.faceProcessor.processFaces(videoEl, 5)
       .subscribe((event) => {
         // console.log('EVENT', event);
         if (event.kind === 'start') {
-          console.log('STARTED!');
+          debugLog('STARTED!');
           this.prompts = PROMPTS.no_detection;
           this.started = true;
         } else if (event.kind === 'transform') {
@@ -232,7 +233,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
             .pipe(
               tap((result: any) => {
                 if (result.success) {
-                  console.log('SETTING OWN INFO', result);
+                  debugLog('SETTING OWN INFO', result);
                   this.state.setOwnInfo(result);
                 }
               })
@@ -243,7 +244,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
             this.completed.next();
           });
           this.completed.pipe(first()).subscribe(() => {
-            console.log('completed');
+            debugLog('completed');
             (this.inputVideo.nativeElement as HTMLVideoElement).remove();
             this.videoStream.getVideoTracks()[0].stop();
             if (this.state.getPlayed()) {
@@ -319,7 +320,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   set allowed(value) {
-    console.log('ALLOWED=', value);
+    debugLog('ALLOWED=', value);
     this._allowed = value;
     this.faceProcessor.allowed = value;
     this.stopCaptureCountdown();
