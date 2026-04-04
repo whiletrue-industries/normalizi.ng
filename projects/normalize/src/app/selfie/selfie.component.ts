@@ -19,6 +19,10 @@ const PROMPTS = {
   hold_still2: ["That's it", 'now hold still'],
 }
 
+type MediaTrackConstraintsWithResizeMode = MediaTrackConstraints & {
+  resizeMode?: 'none';
+};
+
 @Component({
     selector: 'app-selfie',
     templateUrl: './selfie.component.html',
@@ -43,8 +47,16 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   public detected = false;
   public src = '';
   public transform = '';
-  public maskTransform = '';
   public transformOrigin = '';
+  public faceOffsetX = 0;
+  public faceOffsetY = 0;
+  public faceInFrame = false;
+  public maskOverlayScale = 1;
+  public showDynamicRings = false;
+  public showConfirmedOverlay = false;
+  public dynamicRingsConfirmed = false;
+  public readonly disableRingFiltersOnMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent);
+  public faceScale = 1;
 
   public orientation = '';
   public scale = '';
@@ -56,12 +68,15 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   public promptsStream = new Subject<string[]>();
   private promptOutTimeout: ReturnType<typeof setTimeout> | null = null;
   private promptInTimeout: ReturnType<typeof setTimeout> | null = null;
+  private ringHideTimeout: ReturnType<typeof setTimeout> | null = null;
+  private ringRevealAnimationFrameId: number | null = null;
 
   public svgHack = false;
   public _allowed = false;
-  readonly captureTimeoutMs = 10000;
+  readonly captureTimeoutMs = 5000;
   readonly captureButtonRingLength = 188.5;
   public captureButtonRingOffset = 0;
+  readonly ringTransitionMs = 200;
 
 
   constructor(private faceProcessor: FaceProcessorService, private api: ApiService, private state: StateService,
@@ -121,25 +136,60 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
     const videoEl: HTMLVideoElement = this.inputVideo.nativeElement;
     const supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
     debugLog('SUPPORTED', JSON.stringify(supportedConstraints));
-    const videoConstraints: any = {};
-    if (supportedConstraints.facingMode) { videoConstraints.facingMode = {exact: 'user'}; }
-    if (supportedConstraints.height) { videoConstraints.height = {min: 960}; }
-    if (supportedConstraints.width) { videoConstraints.width = {min: 540}; }
-    debugLog('CONSTRAINTS', JSON.stringify(supportedConstraints));
-    try {
-      this.videoStream = await navigator.mediaDevices
-        .getUserMedia({
-          video: videoConstraints,
-        });
-    } catch (e) {
-      delete videoConstraints.width;
-      delete videoConstraints.height;
-      this.videoStream = await navigator.mediaDevices
-        .getUserMedia({
-          video: videoConstraints,
-        });
+    const strictConstraints: MediaTrackConstraints = {};
+    if (supportedConstraints.facingMode) {
+      strictConstraints.facingMode = { exact: 'user' };
     }
-    debugLog('STREAM SIZE', this.videoStream.getVideoTracks()[0].getSettings().width, this.videoStream.getVideoTracks()[0].getSettings().height);
+    if (supportedConstraints.height) {
+      strictConstraints.height = { min: 960 };
+    }
+    if (supportedConstraints.width) {
+      strictConstraints.width = { min: 540 };
+    }
+
+    const softConstraints: MediaTrackConstraints = {};
+    if (supportedConstraints.facingMode) {
+      softConstraints.facingMode = { ideal: 'user' };
+    }
+    if (supportedConstraints.height) {
+      softConstraints.height = { ideal: 960 };
+    }
+    if (supportedConstraints.width) {
+      softConstraints.width = { ideal: 540 };
+    }
+
+    const sizeOnlyConstraints: MediaTrackConstraints = {};
+    if (supportedConstraints.height) {
+      sizeOnlyConstraints.height = { ideal: 960 };
+    }
+    if (supportedConstraints.width) {
+      sizeOnlyConstraints.width = { ideal: 540 };
+    }
+
+    const attempts: MediaStreamConstraints[] = [
+      { video: strictConstraints },
+      { video: softConstraints },
+      { video: sizeOnlyConstraints },
+      { video: true },
+    ];
+
+    debugLog('CONSTRAINT ATTEMPTS', attempts.map((a) => a.video));
+
+    let lastError: unknown = null;
+    for (const attempt of attempts) {
+      try {
+        this.videoStream = await navigator.mediaDevices.getUserMedia(attempt);
+        break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (!this.videoStream) {
+      throw lastError;
+    }
+    const videoTrack = this.videoStream.getVideoTracks()[0];
+    debugLog('STREAM SIZE', videoTrack.getSettings().width, videoTrack.getSettings().height);
 
     videoEl.srcObject = this.videoStream;
     fromEvent(videoEl, 'play').pipe(
@@ -163,7 +213,8 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
           this.el.nativeElement.offsetHeight/videoEl.offsetHeight,
           1
         );
-        this.maskOverlayTransform = `scale(${videoEl.offsetHeight * 0.675 / 254 * this.faceProcessor.defaultScale})`;
+        this.maskOverlayScale = videoEl.offsetHeight * 0.675 / 254 * this.faceProcessor.defaultScale;
+        this.maskOverlayTransform = `scale(${this.maskOverlayScale})`;
         // this.maskOverlayTransform = `scale(${videoEl.offsetHeight * 0.675 / 254})`;
         debugLog('RETURNING CAN START');
         return this.canStart;
@@ -187,14 +238,32 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
           debugLog('STARTED!');
           this.prompts = PROMPTS.no_detection;
           this.started = true;
+          this.faceOffsetX = 0;
+          this.faceOffsetY = 0;
+          this.faceInFrame = false;
+          this.showDynamicRings = false;
+          this.showConfirmedOverlay = false;
+          this.dynamicRingsConfirmed = false;
+          this.faceScale = 1;
         } else if (event.kind === 'transform') {
           this.transform = event.transform;
           this.transformOrigin = event.transformOrigin;
-          this.maskTransform = event.maskTransform;
+          const faceInFrame = event.faceOffsetX !== undefined;
+          const faceOffsetX = Number.isFinite(event.faceOffsetX) ? event.faceOffsetX : 0;
+          const faceOffsetY = Number.isFinite(event.faceOffsetY) ? event.faceOffsetY : 0;
+          this.faceInFrame = faceInFrame;
           this.distance = (event.distance as Number).toFixed(2);
           this.orientation = (event.orientation as Number).toFixed(1);;
           this.scale = (event.scale as Number).toFixed(2);;
+          this.faceScale = Number.isFinite(event.scale) ? event.scale : 1;
           this.detected = event.snapped;
+          if (event.snapped) {
+            this.animateRingsToCenter(true);
+          } else if (faceInFrame) {
+            this.animateRingsFromCenter(faceOffsetX, faceOffsetY);
+          } else {
+            this.animateRingsToCenter(false);
+          }
           if (event.snapped) {
             if (!this._allowed && this.captureCountdownSubscription === null) {
               this.startCaptureCountdown();
@@ -327,8 +396,87 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
     return this._allowed;
   }
 
+  private cancelRingTimers() {
+    if (this.ringHideTimeout) {
+      clearTimeout(this.ringHideTimeout);
+      this.ringHideTimeout = null;
+    }
+
+    if (this.ringRevealAnimationFrameId !== null) {
+      cancelAnimationFrame(this.ringRevealAnimationFrameId);
+      this.ringRevealAnimationFrameId = null;
+    }
+  }
+
+  private animateRingsFromCenter(targetX: number, targetY: number) {
+    this.cancelRingTimers();
+    this.showConfirmedOverlay = false;
+    this.dynamicRingsConfirmed = false;
+
+    if (!this.showDynamicRings) {
+      this.showDynamicRings = true;
+      this.faceOffsetX = 0;
+      this.faceOffsetY = 0;
+      this.ringRevealAnimationFrameId = requestAnimationFrame(() => {
+        this.ringRevealAnimationFrameId = null;
+        this.faceOffsetX = targetX;
+        this.faceOffsetY = targetY;
+      });
+      return;
+    }
+
+    this.faceOffsetX = targetX;
+    this.faceOffsetY = targetY;
+  }
+
+  private animateRingsToCenter(showConfirmedOverlay: boolean) {
+    this.cancelRingTimers();
+    this.dynamicRingsConfirmed = showConfirmedOverlay;
+
+    if (!this.showDynamicRings) {
+      this.showConfirmedOverlay = showConfirmedOverlay;
+      this.faceOffsetX = 0;
+      this.faceOffsetY = 0;
+      return;
+    }
+
+    this.faceOffsetX = 0;
+    this.faceOffsetY = 0;
+    this.ringHideTimeout = setTimeout(() => {
+      this.showDynamicRings = false;
+      this.showConfirmedOverlay = showConfirmedOverlay;
+      this.dynamicRingsConfirmed = false;
+      this.ringHideTimeout = null;
+    }, this.ringTransitionMs);
+  }
+
+  ringTransform(influence: number): string {
+    // Divide by maskOverlayScale to convert screen-px offsets to SVG user units.
+    // X is negated because the SVG is inside .video which is scaleX(-1).
+    const x = (-this.faceOffsetX / this.maskOverlayScale) * influence;
+    const y = (this.faceOffsetY / this.maskOverlayScale) * influence;
+    return `translate(${x}px, ${y}px)`;
+  }
+
+  centerRingTransform(influence: number): string {
+    const x = (-this.faceOffsetX / this.maskOverlayScale) * influence;
+    const y = (this.faceOffsetY / this.maskOverlayScale) * influence;
+    const targetScale = 1 / Math.max(this.faceScale, 0.001);
+    const clampedScale = this.detected ? 1 : Math.max(0.7, Math.min(1.45, targetScale));
+    return `translate(${x}px, ${y}px) scale(${clampedScale})`;
+  }
+
+  get ringFilterAttr(): string | null {
+    if (this.disableRingFiltersOnMobile) {
+      return null;
+    }
+
+    return this.dynamicRingsConfirmed ? 'url(#ring-glow-green)' : 'url(#ring-glow-red)';
+  }
+
   ngOnDestroy() {
     this.stopCaptureCountdown();
+    this.cancelRingTimers();
     if (this.promptOutTimeout) {
       clearTimeout(this.promptOutTimeout);
       this.promptOutTimeout = null;
