@@ -15,6 +15,7 @@ import { TSNEOverlay } from './tsne-overlay';
 import { FaceApiService } from '../face-api.service';
 import { EmailModalComponent } from './email-modal/email-modal.component';
 import { OutputMapComponent } from '../output-map/output-map.component';
+import { debugLog } from '../logger';
 
 @Component({
     selector: 'app-map',
@@ -57,6 +58,11 @@ export class MapComponent implements OnInit, AfterViewInit {
   emailModalOpen = false;
   deleteModalOpen = false;
 
+  private readonly transitionEase = 0.12;
+  private readonly zoomOutDurationSec = 1.35;
+  private readonly zoomInDurationSec = 1.65;
+  private readonly drawerMoveDurationSec = 1.1;
+
   @ViewChild(OutputMapComponent) mapElement: OutputMapComponent;
   @ViewChild(EmailModalComponent) emailModal: EmailModalComponent;
   
@@ -76,13 +82,13 @@ export class MapComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    console.log('HAS SELFIE', this.state.imageID, this.state.descriptor);
+    debugLog('HAS SELFIE', this.state.imageID, this.state.descriptor);
     setTimeout(() => {
       this.hasSelfie = this.state.imageID || this.state.descriptor;
     }, 0);
     let start = this.state.gallery ? from([false]) : from([true]);
     this.state.needsEmail.subscribe(() => {
-      console.log('NEEDS EMAIL');
+      debugLog('NEEDS EMAIL');
       this.definition = true;
       if (this.state.getOwnItemID() && !this.state.getAskedForEmail()) {
         this.emailModalOpen = true;
@@ -108,7 +114,7 @@ export class MapComponent implements OnInit, AfterViewInit {
       }
     });
     if (!this.state.getNeedsEmail()) {
-      console.log('DOESNT NEED EMAIL');
+      debugLog('DOESNT NEED EMAIL');
       this.definitionClosed.next();
       if (this.state.gallery) {
         this.router.navigate(['/selfie']);
@@ -117,7 +123,7 @@ export class MapComponent implements OnInit, AfterViewInit {
     start.pipe(
       filter((el) => !!el),
       switchMap(() => {
-        console.log('WAITING FOR READY');
+        debugLog('WAITING FOR READY');
         return this.ready;
       }),
       tap(() => { // SET UP MAP
@@ -232,14 +238,21 @@ export class MapComponent implements OnInit, AfterViewInit {
 
                 const pos = targetGi.pos;
                 center = [-pos.y - 0.5, pos.x + 0.5];
-                this.map.flyTo(this.map.getCenter(), this.maxZoom - 5, {animate: true, duration: 1});
               }
               return center;
             }),
-            delay(3000),
+            switchMap((center) => {
+              if (center === null) {
+                return from([null]);
+              }
+
+              return this.flyToSmooth(this.map.getCenter(), this.maxZoom - 5, this.zoomOutDurationSec).pipe(
+                switchMap(() => this.flyToSmooth(center, this.maxZoom, this.zoomInDurationSec)),
+                map(() => center)
+              );
+            }),
           ).subscribe((center) => {
-            if (targetGi !== null) {
-              this.map.flyTo(center, this.maxZoom, {animate: true, duration: 1});
+            if (center !== null && targetGi !== null) {
               this.focusedItem = targetGi;
               this.drawerOpen = true;
             }
@@ -248,7 +261,7 @@ export class MapComponent implements OnInit, AfterViewInit {
         this.grid.next(this.configuration.grid);
       })
     ).subscribe(() => {
-      console.log('FINISHED VIEW INIT');
+      debugLog('FINISHED VIEW INIT');
     });
   }
 
@@ -274,7 +287,7 @@ export class MapComponent implements OnInit, AfterViewInit {
     const x = Math.floor(pos.lng);
     const y = -Math.ceil(pos.lat);
     const dist = Math.sqrt(Math.pow(x - pos.lng, 2) + Math.pow(y + pos.lat, 2));
-    if (this.focusedLayerPos.x !== x || this.focusedLayerPos.x !== y) {
+    if (this.focusedLayerPos.x !== x || this.focusedLayerPos.y !== y) {
       this.focusedLayerPos = {x, y};
       this.focusedState = false;
       for (const item of this.configuration.grid) {
@@ -321,11 +334,10 @@ export class MapComponent implements OnInit, AfterViewInit {
     this.drawerOpen = false;
     const pos = this.ownGI.pos;
     const center: L.LatLngExpression = [-pos.y - 0.5, pos.x + 0.5];
-    this.map.flyTo(center, this.maxZoom, {animate: true, duration: 1});
-    setTimeout(() => {
+    this.flyToSmooth(center, this.maxZoom, this.zoomInDurationSec).subscribe(() => {
       this.focusedItem = this.ownGI;
       this.drawerOpen = true;  
-    }, 3000);
+    });
   }
 
   updateBreatheOverlay(pos) {
@@ -342,7 +354,11 @@ export class MapComponent implements OnInit, AfterViewInit {
     if (this.map && this.focusedItem) {
       const zoom = this.map.getZoom();
       if (open) {
-        let options: any = {animate: true};
+        const options: any = {
+          animate: true,
+          duration: this.drawerMoveDurationSec,
+          easeLinearity: this.transitionEase,
+        };
         if (this.layout.mobile) {
           options.paddingBottomRight = [0, open ? window.innerHeight * 0.73 : 70]
         } else {
@@ -353,7 +369,11 @@ export class MapComponent implements OnInit, AfterViewInit {
         );
         this.updateBreatheOverlay(this.focusedItem.pos);
       } else {
-        this.map.setView([-this.focusedItem.pos.y - 0.5, this.focusedItem.pos.x + 0.5], zoom);
+        this.map.setView(
+          [-this.focusedItem.pos.y - 0.5, this.focusedItem.pos.x + 0.5],
+          zoom,
+          { animate: true, duration: this.drawerMoveDurationSec, easeLinearity: this.transitionEase }
+        );
         if (this.breatheOverlay) {
           this.breatheOverlay.remove();
           this.breatheOverlay = null;
@@ -365,6 +385,48 @@ export class MapComponent implements OnInit, AfterViewInit {
 
   get drawerOpen() {
     return this._drawerOpen;
+  }
+
+  private flyToSmooth(center: L.LatLngExpression, zoom: number, durationSec: number): Observable<void> {
+    return new Observable<void>((observer) => {
+      if (!this.map) {
+        observer.next();
+        observer.complete();
+        return () => {
+          // No-op teardown when map is unavailable.
+        };
+      }
+
+      let done = false;
+      const complete = () => {
+        if (done) {
+          return;
+        }
+        done = true;
+        clearTimeout(fallbackTimeout);
+        this.map.off('moveend', complete);
+        this.map.off('zoomend', complete);
+        observer.next();
+        observer.complete();
+      };
+
+      this.map.once('moveend', complete);
+      this.map.once('zoomend', complete);
+      this.map.flyTo(center, zoom, {
+        animate: true,
+        duration: durationSec,
+        easeLinearity: this.transitionEase,
+      });
+
+      // Fallback in case map events are skipped by a no-op transition.
+      const fallbackTimeout = setTimeout(complete, durationSec * 1000 + 250);
+
+      return () => {
+        clearTimeout(fallbackTimeout);
+        this.map.off('moveend', complete);
+        this.map.off('zoomend', complete);
+      };
+    });
   }
 
 }

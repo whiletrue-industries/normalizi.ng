@@ -5,6 +5,7 @@ import { catchError, filter, map, switchMap, tap } from 'rxjs/operators';
 import { AnimationManagerService } from './animation-manager.service';
 import { ConfigService } from './config.service';
 import { FaceApiService } from './face-api.service';
+import { debugLog } from './logger';
 
 
 
@@ -129,7 +130,7 @@ export class FaceProcessorService {
         return detectSingleFace(canvas, this.detectorOptions).withFaceLandmarks(this.config.TINY).run();
       }),
       catchError((e, caught) => {
-        console.log('ERRR', e);
+        debugLog('ERRR', e);
         return from([false]);
       }),
       filter((result: any) => {
@@ -157,7 +158,7 @@ export class FaceProcessorService {
       }),
       switchMap((result) => {
         if (animationObs.cancelled) {
-          console.log('SKIPPING ROTATION, CANCELLED')
+          debugLog('SKIPPING ROTATION, CANCELLED')
           return from([null]);
         }
         this.detectorOptions = this.scoreThresholdLow;
@@ -259,7 +260,7 @@ export class FaceProcessorService {
       filter(() => skipFrames === 0 && frames < this.config.COLLECTED_FRAMES && this.allowed),
       tap((result) => {
         if (animationObs.cancelled) {
-          console.log('SKIPPING EXTRACTION, CANCELLED')
+          debugLog('SKIPPING EXTRACTION, CANCELLED')
           return;
         }
         if (result.gender) {
@@ -308,12 +309,12 @@ export class FaceProcessorService {
             // console.log('COPYING', extent, '-> ', center);
             context.drawImage(canvas, ...extent, ...center);
           } catch (exception) {
-            console.log('FAILED TO COPY', extent, center);
+            debugLog('FAILED TO COPY', extent, center);
           }
           index++;
         }
         frames++;
-        console.log('COLLECTED', frames);
+        debugLog('COLLECTED', frames);
       }),
       filter(() => (frames === this.config.COLLECTED_FRAMES) || animationObs.cancelled),
     ).subscribe(() => {
