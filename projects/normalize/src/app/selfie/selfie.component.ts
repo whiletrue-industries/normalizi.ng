@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, computed, ElementRef, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
 import { animationFrameScheduler, defer, from, fromEvent, interval, ReplaySubject, Subject, Subscription } from 'rxjs';
 import { ConfigService } from '../config.service';
 import { debounceTime, delay, filter, first, map, switchMap, take, takeWhile, tap, throttleTime } from 'rxjs/operators';
@@ -40,22 +40,32 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   public videoHeight = 0;
 
   public started = false;
-  public detected = false;
+  public detected = signal(false);
   public src = '';
   public transform = '';
   public transformOrigin = '';
-  public faceOffsetX = 0;
-  public faceOffsetY = 0;
+  public faceOffsetX = signal(0);
+  public faceOffsetY = signal(0);
   public faceInFrame = false;
-  public maskOverlayScale = 1;
+  public maskOverlayScale = signal(1);
   public showDynamicRings = false;
   public showConfirmedOverlay = false;
   public dynamicRingsConfirmed = false;
   public readonly disableRingFiltersOnMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent);
-  public faceScale = 1;
+  public faceScale = signal(1);
   private static readonly RING_INFLUENCES = [0.00, 0.12, 0.24, 0.36, 0.50, 0.66, 0.82];
-  public ringTransforms: string[] = SelfieComponent.RING_INFLUENCES.map(() => 'translate(0px, 0px)');
-  public centerRingTransformValue = 'translate(0px, 0px) scale(1)';
+  public ringTransforms = computed(() => {
+    const baseX = -this.faceOffsetX() / this.maskOverlayScale();
+    const baseY = this.faceOffsetY() / this.maskOverlayScale();
+    return SelfieComponent.RING_INFLUENCES.map(inf => `translate(${baseX * inf}px, ${baseY * inf}px)`);
+  });
+  public centerRingTransformValue = computed(() => {
+    const baseX = -this.faceOffsetX() / this.maskOverlayScale();
+    const baseY = this.faceOffsetY() / this.maskOverlayScale();
+    const targetScale = 1 / Math.max(this.faceScale(), 0.001);
+    const clampedScale = this.detected() ? 1 : Math.max(0.7, Math.min(1.45, targetScale));
+    return `translate(${baseX}px, ${baseY}px) scale(${clampedScale})`;
+  });
 
   public orientation = '';
   public scale = '';
@@ -212,8 +222,8 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
           this.el.nativeElement.offsetHeight/videoEl.offsetHeight,
           1
         );
-        this.maskOverlayScale = videoEl.offsetHeight * 0.675 / 254 * this.faceProcessor.defaultScale;
-        this.maskOverlayTransform = `scale(${this.maskOverlayScale})`;
+        this.maskOverlayScale.set(videoEl.offsetHeight * 0.675 / 254 * this.faceProcessor.defaultScale);
+        this.maskOverlayTransform = `scale(${this.maskOverlayScale()})`;
         // this.maskOverlayTransform = `scale(${videoEl.offsetHeight * 0.675 / 254})`;
         debugLog('RETURNING CAN START');
         return this.canStart;
@@ -237,14 +247,13 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
           debugLog('STARTED!');
           this.prompts = PROMPTS.no_detection;
           this.started = true;
-          this.faceOffsetX = 0;
-          this.faceOffsetY = 0;
+          this.faceOffsetX.set(0);
+          this.faceOffsetY.set(0);
           this.faceInFrame = false;
           this.showDynamicRings = false;
           this.showConfirmedOverlay = false;
           this.dynamicRingsConfirmed = false;
-          this.faceScale = 1;
-          this.updateRingTransforms();
+          this.faceScale.set(1);
         } else if (event.kind === 'transform') {
           this.transform = event.transform;
           this.transformOrigin = event.transformOrigin;
@@ -255,8 +264,8 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
           this.distance = (event.distance as Number).toFixed(2);
           this.orientation = (event.orientation as Number).toFixed(1);;
           this.scale = (event.scale as Number).toFixed(2);;
-          this.faceScale = Number.isFinite(event.scale) ? event.scale : 1;
-          this.detected = event.snapped;
+          this.faceScale.set(Number.isFinite(event.scale) ? event.scale : 1);
+          this.detected.set(event.snapped);
           if (event.snapped) {
             this.animateRingsToCenter(true);
           } else if (faceInFrame) {
@@ -357,7 +366,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
       map(() => Math.min((animationFrameScheduler.now() - startTime) / this.captureTimeoutMs, 1)),
       takeWhile(progress => progress < 1, true),
     ).subscribe(progress => {
-      if (!this.detected || this._allowed) {
+      if (!this.detected() || this._allowed) {
         this.stopCaptureCountdown();
         return;
       }
@@ -415,21 +424,18 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
 
     if (!this.showDynamicRings) {
       this.showDynamicRings = true;
-      this.faceOffsetX = 0;
-      this.faceOffsetY = 0;
-      this.updateRingTransforms();
+      this.faceOffsetX.set(0);
+      this.faceOffsetY.set(0);
       this.ringRevealAnimationFrameId = requestAnimationFrame(() => {
         this.ringRevealAnimationFrameId = null;
-        this.faceOffsetX = targetX;
-        this.faceOffsetY = targetY;
-        this.updateRingTransforms();
+        this.faceOffsetX.set(targetX);
+        this.faceOffsetY.set(targetY);
       });
       return;
     }
 
-    this.faceOffsetX = targetX;
-    this.faceOffsetY = targetY;
-    this.updateRingTransforms();
+    this.faceOffsetX.set(targetX);
+    this.faceOffsetY.set(targetY);
   }
 
   private animateRingsToCenter(showConfirmedOverlay: boolean) {
@@ -438,35 +444,19 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
 
     if (!this.showDynamicRings) {
       this.showConfirmedOverlay = showConfirmedOverlay;
-      this.faceOffsetX = 0;
-      this.faceOffsetY = 0;
-      this.updateRingTransforms();
+      this.faceOffsetX.set(0);
+      this.faceOffsetY.set(0);
       return;
     }
 
-    this.faceOffsetX = 0;
-    this.faceOffsetY = 0;
-    this.updateRingTransforms();
+    this.faceOffsetX.set(0);
+    this.faceOffsetY.set(0);
     this.ringHideTimeout = setTimeout(() => {
       this.showDynamicRings = false;
       this.showConfirmedOverlay = showConfirmedOverlay;
       this.dynamicRingsConfirmed = false;
       this.ringHideTimeout = null;
     }, this.ringTransitionMs);
-  }
-
-  private updateRingTransforms(): void {
-    // Divide by maskOverlayScale to convert screen-px offsets to SVG user units.
-    // X is negated because the SVG is inside .video which is scaleX(-1).
-    const baseX = -this.faceOffsetX / this.maskOverlayScale;
-    const baseY = this.faceOffsetY / this.maskOverlayScale;
-    for (let i = 0; i < SelfieComponent.RING_INFLUENCES.length; i++) {
-      const inf = SelfieComponent.RING_INFLUENCES[i];
-      this.ringTransforms[i] = `translate(${baseX * inf}px, ${baseY * inf}px)`;
-    }
-    const targetScale = 1 / Math.max(this.faceScale, 0.001);
-    const clampedScale = this.detected ? 1 : Math.max(0.7, Math.min(1.45, targetScale));
-    this.centerRingTransformValue = `translate(${baseX}px, ${baseY}px) scale(${clampedScale})`;
   }
 
   get ringFilterAttr(): string | null {

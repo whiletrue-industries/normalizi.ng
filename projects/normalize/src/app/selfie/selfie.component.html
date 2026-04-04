@@ -15,7 +15,7 @@
 <div class='video'>
   <video #inputVideo [autoplay]='true' [muted]='true' [volume]='0' playsinline
     [style.transform]='transform' [style.transform-origin]='transformOrigin'
-    [class.no-detection]='!detected'
+    [class.no-detection]='!detected()'
   ></video>
   @if (videoHeight) {
     <div class='face-mask-overlay'>
@@ -44,28 +44,28 @@
             </filter>
           </defs>
           <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr'>
-            <circle class='ring-layer ring-outermost' cx='500' cy='258' r='199.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[0]'></circle>
+            <circle class='ring-layer ring-outermost' cx='500' cy='258' r='199.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms()[0]'></circle>
           </g>
           <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr'>
-            <circle class='ring-layer' cx='500' cy='258' r='179.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[1]'></circle>
+            <circle class='ring-layer' cx='500' cy='258' r='179.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms()[1]'></circle>
           </g>
           <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr'>
-            <circle class='ring-layer' cx='500' cy='258' r='159.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[2]'></circle>
+            <circle class='ring-layer' cx='500' cy='258' r='159.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms()[2]'></circle>
           </g>
           <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr'>
-            <circle class='ring-layer' cx='500' cy='258' r='139.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[3]'></circle>
+            <circle class='ring-layer' cx='500' cy='258' r='139.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms()[3]'></circle>
           </g>
           <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr'>
-            <circle class='ring-layer' cx='500' cy='258' r='119.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[4]'></circle>
+            <circle class='ring-layer' cx='500' cy='258' r='119.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms()[4]'></circle>
           </g>
           <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr'>
-            <circle class='ring-layer' cx='500' cy='258' r='99.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[5]'></circle>
+            <circle class='ring-layer' cx='500' cy='258' r='99.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms()[5]'></circle>
           </g>
           <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr'>
-            <circle class='ring-layer' cx='500' cy='258' r='79.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[6]'></circle>
+            <circle class='ring-layer' cx='500' cy='258' r='79.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms()[6]'></circle>
           </g>
           <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr'>
-            <circle class='ring-layer ring-smallest' cx='500' cy='258' r='77' stroke='white' stroke-width='6' [style.transform]='centerRingTransformValue'></circle>
+            <circle class='ring-layer ring-smallest' cx='500' cy='258' r='77' stroke='white' stroke-width='6' [style.transform]='centerRingTransformValue()'></circle>
           </g>
           <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr'>
             <path d='M472.941 266.993C477.36 266.994 480.942 263.413 480.943 258.995C480.943 254.577 477.362 250.994 472.944 250.993C468.526 250.993 464.943 254.574 464.943 258.992C464.942 263.41 468.523 266.993 472.941 266.993Z' stroke='white' stroke-width='2'></path>
@@ -96,7 +96,7 @@
     </div>
   }
 </div>
-@if (detected) {
+@if (detected()) {
   <button class='shutter' type='button' aria-label='Capture' (touchstart)='setAllowed($event, true)' (click)='setAllowed($event, true)'>
     <svg viewBox='0 0 72 72' aria-hidden='true' focusable='false'>
       <circle cx='36' cy='36' r='26' fill='white'></circle>
