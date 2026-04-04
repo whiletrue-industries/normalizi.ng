@@ -20,6 +20,12 @@ export class ConfigService {
   IMAGE_SIZE_BY_INDEX = [];
   
   constructor() {
+    const mobileUserAgent = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent);
+    if (mobileUserAgent) {
+      this.TINY = true;
+      this.COLLECTED_FRAMES = 5;
+    }
+
     for (const feature of this.FEATURE_ORDER) {
       const ratio = this.FEATURES[feature].ratio;
       let width = this.IMAGE_SIZE;

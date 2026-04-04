@@ -112,12 +112,14 @@
 
                 &.dynamic-rings {
                     overflow: visible;
+                    will-change: transform;
 
                     .ring-layer {
                         transform-box: fill-box;
                         transform-origin: center;
-                        transition: transform 200ms ease-out;
+                        transition: transform 140ms linear;
                         vector-effect: non-scaling-stroke;
+                        will-change: transform;
                     }
 
                     .ring-smallest {

@@ -22,14 +22,6 @@ type MediaTrackConstraintsWithResizeMode = MediaTrackConstraints & {
   resizeMode?: 'none';
 };
 
-type MediaTrackCapabilitiesWithResizeMode = MediaTrackCapabilities & {
-  resizeMode?: string[];
-};
-
-type MediaTrackSupportedConstraintsWithResizeMode = MediaTrackSupportedConstraints & {
-  resizeMode?: boolean;
-};
-
 @Component({
     selector: 'app-selfie',
     templateUrl: './selfie.component.html',
@@ -63,6 +55,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   public showDynamicRings = false;
   public showConfirmedOverlay = false;
   public dynamicRingsConfirmed = false;
+  public readonly disableRingFiltersOnMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent);
 
   public orientation = '';
   public scale = '';
@@ -140,47 +133,36 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
 
   async init() {
     const videoEl: HTMLVideoElement = this.inputVideo.nativeElement;
-    const supportedConstraints = navigator.mediaDevices.getSupportedConstraints() as MediaTrackSupportedConstraintsWithResizeMode;
+    const supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
     console.log('SUPPORTED', JSON.stringify(supportedConstraints));
-    const preferredHeight = 2160;
-    const preferredWidth = 3840;
-    const strictConstraints: MediaTrackConstraintsWithResizeMode = {};
+    const strictConstraints: MediaTrackConstraints = {};
     if (supportedConstraints.facingMode) {
       strictConstraints.facingMode = { exact: 'user' };
     }
     if (supportedConstraints.height) {
-      strictConstraints.height = { ideal: preferredHeight, min: 960 };
+      strictConstraints.height = { min: 960 };
     }
     if (supportedConstraints.width) {
-      strictConstraints.width = { ideal: preferredWidth, min: 540 };
-    }
-    if (supportedConstraints.resizeMode) {
-      strictConstraints.resizeMode = 'none';
+      strictConstraints.width = { min: 540 };
     }
 
-    const softConstraints: MediaTrackConstraintsWithResizeMode = {};
+    const softConstraints: MediaTrackConstraints = {};
     if (supportedConstraints.facingMode) {
       softConstraints.facingMode = { ideal: 'user' };
     }
     if (supportedConstraints.height) {
-      softConstraints.height = { ideal: preferredHeight, min: 960 };
+      softConstraints.height = { ideal: 960 };
     }
     if (supportedConstraints.width) {
-      softConstraints.width = { ideal: preferredWidth, min: 540 };
-    }
-    if (supportedConstraints.resizeMode) {
-      softConstraints.resizeMode = 'none';
+      softConstraints.width = { ideal: 540 };
     }
 
-    const sizeOnlyConstraints: MediaTrackConstraintsWithResizeMode = {};
+    const sizeOnlyConstraints: MediaTrackConstraints = {};
     if (supportedConstraints.height) {
-      sizeOnlyConstraints.height = { ideal: preferredHeight, min: 960 };
+      sizeOnlyConstraints.height = { ideal: 960 };
     }
     if (supportedConstraints.width) {
-      sizeOnlyConstraints.width = { ideal: preferredWidth, min: 540 };
-    }
-    if (supportedConstraints.resizeMode) {
-      sizeOnlyConstraints.resizeMode = 'none';
+      sizeOnlyConstraints.width = { ideal: 540 };
     }
 
     const attempts: MediaStreamConstraints[] = [
@@ -206,7 +188,6 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
       throw lastError;
     }
     const videoTrack = this.videoStream.getVideoTracks()[0];
-    await this.applyMaximumTrackResolution(videoTrack, supportedConstraints);
     console.log('STREAM SIZE', videoTrack.getSettings().width, videoTrack.getSettings().height);
 
     videoEl.srcObject = this.videoStream;
@@ -244,37 +225,6 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
     ).subscribe(() => {
         console.log('DETECTING FACES...');
     });
-  }
-
-  private async applyMaximumTrackResolution(videoTrack: MediaStreamTrack, supportedConstraints: MediaTrackSupportedConstraintsWithResizeMode) {
-    if (typeof videoTrack.getCapabilities !== 'function') {
-      return;
-    }
-
-    const capabilities = videoTrack.getCapabilities() as MediaTrackCapabilitiesWithResizeMode;
-    const nextConstraints: MediaTrackConstraintsWithResizeMode = {};
-
-    if (supportedConstraints.width && capabilities.width?.max) {
-      nextConstraints.width = { ideal: capabilities.width.max };
-    }
-
-    if (supportedConstraints.height && capabilities.height?.max) {
-      nextConstraints.height = { ideal: capabilities.height.max };
-    }
-
-    if (supportedConstraints.resizeMode && Array.isArray(capabilities.resizeMode) && capabilities.resizeMode.includes('none')) {
-      nextConstraints.resizeMode = 'none';
-    }
-
-    if (Object.keys(nextConstraints).length === 0) {
-      return;
-    }
-
-    try {
-      await videoTrack.applyConstraints(nextConstraints);
-    } catch (error) {
-      console.log('MAX RESOLUTION CONSTRAINTS FAILED', error);
-    }
   }
 
   triggerDetectFaces() {
@@ -514,6 +464,14 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
     const x = (-this.faceOffsetX / this.maskOverlayScale) * influence;
     const y = (this.faceOffsetY / this.maskOverlayScale) * influence;
     return `translate(${x}px, ${y}px)`;
+  }
+
+  get ringFilterAttr(): string | null {
+    if (this.disableRingFiltersOnMobile) {
+      return null;
+    }
+
+    return this.dynamicRingsConfirmed ? 'url(#ring-glow-green)' : 'url(#ring-glow-red)';
   }
 
   ngOnDestroy() {

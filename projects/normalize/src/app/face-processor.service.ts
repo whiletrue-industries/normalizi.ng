@@ -70,8 +70,8 @@ export class FaceProcessorService {
 
   constructor(private faceapi: FaceApiService, private config: ConfigService, private animationManager: AnimationManagerService) {
     if (config.TINY) {
-      this.scoreThresholdHigh = new TinyFaceDetectorOptions({inputSize: 256, scoreThreshold: 0.75});;
-      this.scoreThresholdLow = new TinyFaceDetectorOptions({inputSize: 256, scoreThreshold: 0.5});;
+      this.scoreThresholdHigh = new TinyFaceDetectorOptions({inputSize: 128, scoreThreshold: 0.75});;
+      this.scoreThresholdLow = new TinyFaceDetectorOptions({inputSize: 128, scoreThreshold: 0.5});;
     } else {
       this.scoreThresholdHigh = new SsdMobilenetv1Options({minConfidence: 0.75, maxResults: 1});;
       this.scoreThresholdLow = new SsdMobilenetv1Options({minConfidence: 0.5, maxResults: 1});;        
@@ -84,14 +84,21 @@ export class FaceProcessorService {
     const canvas = document.createElement('canvas');
     const elementHeight = el.offsetHeight;
     this.allowed = false;
+    const processingEdge = this.config.TINY ? 640 : 960;
+    let sourceWidth = 0;
+    let sourceHeight = 0;
     if (el instanceof HTMLVideoElement) {
-      canvas.width = el.videoWidth;
-      canvas.height = el.videoHeight;  
+      sourceWidth = el.videoWidth;
+      sourceHeight = el.videoHeight;
     }
     if (el instanceof HTMLImageElement) {
-      canvas.width = el.width;
-      canvas.height = el.height;  
+      sourceWidth = el.width;
+      sourceHeight = el.height;
     }
+    const sourceMaxEdge = Math.max(sourceWidth, sourceHeight, 1);
+    const processingScale = Math.min(1, processingEdge / sourceMaxEdge);
+    canvas.width = Math.max(1, Math.round(sourceWidth * processingScale));
+    canvas.height = Math.max(1, Math.round(sourceHeight * processingScale));
     // console.log('CANVAS', canvas);
     const ratio = Math.min(el.offsetWidth / canvas.width, el.offsetHeight / canvas.height);
     // console.log('RATIO', ratio);
@@ -221,6 +228,10 @@ export class FaceProcessorService {
             faceOffsetY,
             orientation, scale, distance: distance / canvas.height,
           });
+          // Avoid the expensive descriptor/age second pass while still guiding alignment.
+          if (!this.allowed) {
+            return from([result]);
+          }
           const ret = detectSingleFace(canvas, this.detectorOptions).withFaceLandmarks(this.config.TINY).withFaceDescriptor();
           if (gender_age.gender) {
             return ret.run();
