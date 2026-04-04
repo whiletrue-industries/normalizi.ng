@@ -121,23 +121,57 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
     const videoEl: HTMLVideoElement = this.inputVideo.nativeElement;
     const supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
     console.log('SUPPORTED', JSON.stringify(supportedConstraints));
-    const videoConstraints: any = {};
-    if (supportedConstraints.facingMode) { videoConstraints.facingMode = {exact: 'user'}; }
-    if (supportedConstraints.height) { videoConstraints.height = {min: 960}; }
-    if (supportedConstraints.width) { videoConstraints.width = {min: 540}; }
-    console.log('CONSTRAINTS', JSON.stringify(supportedConstraints));
-    try {
-      this.videoStream = await navigator.mediaDevices
-        .getUserMedia({
-          video: videoConstraints,
-        });
-    } catch (e) {
-      delete videoConstraints.width;
-      delete videoConstraints.height;
-      this.videoStream = await navigator.mediaDevices
-        .getUserMedia({
-          video: videoConstraints,
-        });
+    const strictConstraints: MediaTrackConstraints = {};
+    if (supportedConstraints.facingMode) {
+      strictConstraints.facingMode = { exact: 'user' };
+    }
+    if (supportedConstraints.height) {
+      strictConstraints.height = { min: 960 };
+    }
+    if (supportedConstraints.width) {
+      strictConstraints.width = { min: 540 };
+    }
+
+    const softConstraints: MediaTrackConstraints = {};
+    if (supportedConstraints.facingMode) {
+      softConstraints.facingMode = { ideal: 'user' };
+    }
+    if (supportedConstraints.height) {
+      softConstraints.height = { ideal: 960 };
+    }
+    if (supportedConstraints.width) {
+      softConstraints.width = { ideal: 540 };
+    }
+
+    const sizeOnlyConstraints: MediaTrackConstraints = {};
+    if (supportedConstraints.height) {
+      sizeOnlyConstraints.height = { ideal: 960 };
+    }
+    if (supportedConstraints.width) {
+      sizeOnlyConstraints.width = { ideal: 540 };
+    }
+
+    const attempts: MediaStreamConstraints[] = [
+      { video: strictConstraints },
+      { video: softConstraints },
+      { video: sizeOnlyConstraints },
+      { video: true },
+    ];
+
+    console.log('CONSTRAINT ATTEMPTS', attempts.map((a) => a.video));
+
+    let lastError: unknown = null;
+    for (const attempt of attempts) {
+      try {
+        this.videoStream = await navigator.mediaDevices.getUserMedia(attempt);
+        break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (!this.videoStream) {
+      throw lastError;
     }
     console.log('STREAM SIZE', this.videoStream.getVideoTracks()[0].getSettings().width, this.videoStream.getVideoTracks()[0].getSettings().height);
 
