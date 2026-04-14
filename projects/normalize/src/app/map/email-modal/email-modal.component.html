@@ -1,14 +1,35 @@
-<app-modal submit_text='send' cancel_text='no, thanks' [open]='open' [submit_allowed]='hasEmail' (closed)='close($event)'>
-  <span class='header'>We’re done. Thank you!</span>
+@if (phase === 0) {
+  <app-modal [open]='open' [hide_close]='true' [hide_actions]='true'>
+    <span class='header'>Got it. Thank you!</span>
+    <div class='confirmation-buttons'>
+      <button class='action-btn action-btn--add' type='button' (click)='addToMap()'>Add to the Normalizi.ng map</button>
+      <button class='action-btn action-btn--retake' type='button' (click)='retake()'>Retake my picture</button>
+      @if (countdownSeconds === null) {
+        <button class='action-btn action-btn--remove' type='button' (click)='showDeleteConfirmation()'>Remove my face and my data</button>
+      } @else {
+        <button class='action-btn action-btn--remove action-btn--countdown' type='button' disabled [attr.aria-label]="'deleting in ' + countdownSeconds + ' seconds'">
+          deleting in {{countdownSeconds}} sec
+        </button>
+      }
+    </div>
+  </app-modal>
+}
 
-  <span>We would like to send you a private link so you can always access and manage your data.</span>
+@if (phase === 1) {
+  <app-modal submit_text='send' cancel_text='no, thanks' [open]='open' [submit_allowed]='hasEmail' (closed)='$event ? submitEmail() : noThanks()'>
+    <span class='header'>Your face and data are being added to the map</span>
+    <span>Do you want us to email you a private delete link in case you change your mind?</span>
+    <input #input type='email' placeholder='your email' [(ngModel)]='emailAddress'>
+    @if (emailAddress && !hasEmail) {
+      <span class='error'>oops... this doesn't look like an email address</span>
+    }
+    <span class='smallprint'>*We won't save your email and only use it once</span>
+  </app-modal>
+}
 
-  <span>Where should we send the link?</span>
-
-  <input #input type='email' placeholder='your email' [(ngModel)]='emailAddress'>
-  @if (emailAddress && !hasEmail) {
-    <span class='error'>oops... this doesn’t look like an email address</span>
-  }
-
-  <span class='smallprint'>*We won’t save your email and only use it once</span>
-</app-modal>
+@if (phase === 2) {
+  <app-modal submit_text='delete all my data' cancel_text='cancel' [open]='open' [submit_allowed]='true' (closed)='$event ? confirmDelete() : cancelDelete()'>
+    <span class='header'>Are you sure you want to delete all of your data?</span>
+    <span>We can't undo this...</span>
+  </app-modal>
+}

@@ -13,6 +13,8 @@ export class ModalComponent implements OnInit {
   @Input() cancel_text = '';
   @Input() open = true;
   @Input() submit_allowed = true;
+  @Input() hide_close = false;
+  @Input() hide_actions = false;
   @Output() closed = new EventEmitter<boolean>();
 
   constructor() { }

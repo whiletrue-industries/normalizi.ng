@@ -94,18 +94,9 @@ export class MapComponent implements OnInit, AfterViewInit {
         this.emailModalOpen = true;
         if (!this.state.gallery) {
           start = this.emailModal.closed.pipe(
-            map(() => {
-              this.state.setAskedForEmail();
-              return true;
-            })
-          );  
-        } else {
-          this.emailModal.closed.pipe(
-            switchMap(() => this.definitionClosed),
-            first()
-          ).subscribe(() => {
-            this.router.navigate(['/selfie'])
-          });
+            filter((action: string) => action === 'added' || action === 'deleted'),
+            map(() => true)
+          );
         }
       } else {
         if (this.state.gallery) {
@@ -328,6 +319,46 @@ export class MapComponent implements OnInit, AfterViewInit {
   delete() {
     this.drawerOpen = false
     this.deleteModalOpen = true
+  }
+
+  handleEmailModalClosed(action: string): void {
+    this.emailModalOpen = false;
+    if (action === 'retake') {
+      this.router.navigate(['/selfie']);
+    } else if (action === 'added') {
+      if (this.state.gallery) {
+        this.router.navigate(['/selfie']);
+      }
+    } else if (action === 'deleted') {
+      if (this.state.gallery) {
+        this.router.navigate(['/selfie']);
+      } else {
+        this.hasSelfie = false;
+        this.coverDeletedFace();
+      }
+    }
+  }
+
+  private coverDeletedFace(): void {
+    if (this.ownGI && this.map) {
+      if (this.tsneOverlay) {
+        this.tsneOverlay.removeImageLayer(this.ownGI.item);
+      }
+      const pos = this.ownGI.pos;
+      L.rectangle(
+        [[-pos.y - 1, pos.x], [-pos.y, pos.x + 1]] as L.LatLngBoundsExpression,
+        { color: 'transparent', weight: 0, fillColor: '#EAE7DF', fillOpacity: 1, interactive: false }
+      ).addTo(this.map);
+      const idx = this.configuration.grid.indexOf(this.ownGI);
+      if (idx !== -1) {
+        this.configuration.grid.splice(idx, 1);
+      }
+      if (this.focusedItem === this.ownGI) {
+        this.focusedItem = null;
+        this.drawerOpen = false;
+      }
+      this.ownGI = null;
+    }
   }
 
   focusOnSelf() {

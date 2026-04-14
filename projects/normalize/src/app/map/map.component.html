@@ -28,6 +28,6 @@
   <app-definition imgSrc='def-step3.png' (closed)='definitionClosed.next()'></app-definition>
 }
 <app-consent-modal [open]='consentModalOpen' (closed)='consentModalOpen = false'></app-consent-modal>
-<app-email-modal [open]='emailModalOpen' (closed)='emailModalOpen = false'></app-email-modal>
+<app-email-modal [open]='emailModalOpen' (closed)='handleEmailModalClosed($event)'></app-email-modal>
 <app-redirect-modal [open]='redirectModalOpen' (closed)='redirectModalOpen = false'></app-redirect-modal>
 <app-delete-modal [open]='deleteModalOpen' (closed)='deleteModalOpen = false'></app-delete-modal>
