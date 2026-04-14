@@ -62,6 +62,7 @@ export class EmailModalComponent implements OnInit, OnDestroy {
     this.countdownIntervalHandle = setInterval(() => {
       this.countdownSeconds--;
       if (this.countdownSeconds <= 0) {
+        this.clearTimers();
         this.doDelete();
       }
     }, 1000);

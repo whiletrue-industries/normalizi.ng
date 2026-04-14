@@ -7,7 +7,7 @@
       @if (countdownSeconds === null) {
         <button class='action-btn action-btn--remove' type='button' (click)='showDeleteConfirmation()'>Remove my face and my data</button>
       } @else {
-        <button class='action-btn action-btn--remove action-btn--countdown' type='button' disabled [attr.aria-label]="'deleting in ' + countdownSeconds + ' seconds'">
+        <button class='action-btn action-btn--remove action-btn--countdown' type='button' disabled [attr.aria-label]="'deleting in ' + countdownSeconds + (countdownSeconds === 1 ? ' second' : ' seconds')">
           deleting in {{countdownSeconds}} sec
         </button>
       }

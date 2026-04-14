@@ -62,6 +62,7 @@ export class MapComponent implements OnInit, AfterViewInit {
   private readonly zoomOutDurationSec = 1.35;
   private readonly zoomInDurationSec = 1.65;
   private readonly drawerMoveDurationSec = 1.1;
+  private readonly mapBackgroundColor = '#EAE7DF';
 
   @ViewChild(OutputMapComponent) mapElement: OutputMapComponent;
   @ViewChild(EmailModalComponent) emailModal: EmailModalComponent;
@@ -347,7 +348,7 @@ export class MapComponent implements OnInit, AfterViewInit {
       const pos = this.ownGI.pos;
       L.rectangle(
         [[-pos.y - 1, pos.x], [-pos.y, pos.x + 1]] as L.LatLngBoundsExpression,
-        { color: 'transparent', weight: 0, fillColor: '#EAE7DF', fillOpacity: 1, interactive: false }
+        { color: 'transparent', weight: 0, fillColor: this.mapBackgroundColor, fillOpacity: 1, interactive: false }
       ).addTo(this.map);
       const idx = this.configuration.grid.indexOf(this.ownGI);
       if (idx !== -1) {
