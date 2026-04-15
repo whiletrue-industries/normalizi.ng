@@ -15,7 +15,7 @@ export class ConfigService {
     face: {ratio: 1},
     nose: {ratio: 1.5},
   };
-  TINY = true;
+  TINY = false;
   FEATURE_ORDER = ['nose', 'eyes', 'mouth', 'forehead', 'face'];
   IMAGE_SIZE_BY_INDEX = [];
 

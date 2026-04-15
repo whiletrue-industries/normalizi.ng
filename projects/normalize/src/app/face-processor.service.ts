@@ -71,11 +71,11 @@ export class FaceProcessorService {
 
   constructor(private faceapi: FaceApiService, private config: ConfigService, private animationManager: AnimationManagerService) {
     if (config.TINY) {
-      this.scoreThresholdHigh = new TinyFaceDetectorOptions({inputSize: 224, scoreThreshold: 0.25});;
-      this.scoreThresholdLow = new TinyFaceDetectorOptions({inputSize: 224, scoreThreshold: 0.15});;
+      this.scoreThresholdHigh = new TinyFaceDetectorOptions({inputSize: 256, scoreThreshold: 0.75});;
+      this.scoreThresholdLow = new TinyFaceDetectorOptions({inputSize: 256, scoreThreshold: 0.5});;
     } else {
-      this.scoreThresholdHigh = new SsdMobilenetv1Options({minConfidence: 0.35, maxResults: 1});;
-      this.scoreThresholdLow = new SsdMobilenetv1Options({minConfidence: 0.2, maxResults: 1});;        
+      this.scoreThresholdHigh = new SsdMobilenetv1Options({minConfidence: 0.75, maxResults: 1});;
+      this.scoreThresholdLow = new SsdMobilenetv1Options({minConfidence: 0.5, maxResults: 1});;        
     }
     this.detectorOptions = this.scoreThresholdHigh;
   }

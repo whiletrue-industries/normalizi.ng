@@ -456,6 +456,10 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   centerRingTransform(t: number): string {
+    if (this.dynamicRingsConfirmed) {
+      return 'translate(0px, 0px) scale(1)';
+    }
+
     const x = this.faceOffsetX() * t;
     const y = this.faceOffsetY() * t;
     const scale = this.faceScale();
