@@ -51,7 +51,6 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   public showDynamicRings = false;
   public showConfirmedOverlay = false;
   public dynamicRingsConfirmed = false;
-  public readonly disableRingFiltersOnMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent);
   public faceScale = 1;
 
   public orientation = '';
@@ -463,11 +462,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   get ringFilterAttr(): string | null {
-    if (this.disableRingFiltersOnMobile) {
-      return null;
-    }
-
-    return this.dynamicRingsConfirmed ? 'url(#ring-glow-green)' : 'url(#ring-glow-red)';
+    return null;
   }
 
   ngOnDestroy() {
