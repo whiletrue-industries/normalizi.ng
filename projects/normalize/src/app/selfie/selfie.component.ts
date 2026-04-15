@@ -458,7 +458,9 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   centerRingTransform(t: number): string {
     const x = this.faceOffsetX() * t;
     const y = this.faceOffsetY() * t;
-    return `translate(${x}px, ${y}px) scale(${this.faceScale()})`;
+    const scale = this.faceScale();
+    const inverseScale = Number.isFinite(scale) && scale > 0 ? 1 / scale : 1;
+    return `translate(${x}px, ${y}px) scale(${inverseScale})`;
   }
 
   ngOnDestroy() {
