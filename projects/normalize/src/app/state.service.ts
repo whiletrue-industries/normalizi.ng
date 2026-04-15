@@ -254,12 +254,23 @@ export class StateService {
   }
 
   checkItem(item: ImageItem) {
+    if (!item || !Number.isFinite(item.id) || !item.image) {
+      debugLog('checkItem: invalid item payload, clearing stale own identity without reload', item);
+      this.clear();
+      return false;
+    }
     if (
       (item.id !== this.getOwnItemID()) ||
       (item.image !== this.getOwnImageID())
     ) {
-      this.fullClear();
-      window.location.reload();
+      debugLog('checkItem: own item mismatch, clearing stale own identity without reload', {
+        expectedId: this.getOwnItemID(),
+        actualId: item.id,
+        expectedImage: this.getOwnImageID(),
+        actualImage: item.image,
+      });
+      this.clear();
+      return false;
     }
     return true;
   }

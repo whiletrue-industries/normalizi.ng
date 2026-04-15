@@ -215,12 +215,15 @@ export class MapComponent implements OnInit, AfterViewInit {
           } else {
             items.push(
               this.api.getImage(this.state.getOwnItemID()).pipe(
+                map((item: any) => {
+                  if (!this.state.checkItem(item)) {
+                    return null;
+                  }
+                  return item as ImageItem;
+                }),
                 catchError(() => {
-                  return from([{} as ImageItem]);
-                }),
-                tap((item) => {
-                  this.state.checkItem(item);
-                }),
+                  return from([null]);
+                })
               )
             );
           }
