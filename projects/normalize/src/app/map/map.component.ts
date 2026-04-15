@@ -69,7 +69,6 @@ export class MapComponent implements OnInit, AfterViewInit {
   private readonly drawerMoveDurationSec = 1.1;
   private readonly mapBackgroundColor = '#EAE7DF';
   private readonly blockedMaskColor = '#2D2C29';
-  private readonly forcedBlockedIds = new Set<number>([30557]);
 
   @ViewChild(OutputMapComponent) mapElement: OutputMapComponent;
   @ViewChild(EmailModalComponent) emailModal: EmailModalComponent;
@@ -83,8 +82,8 @@ export class MapComponent implements OnInit, AfterViewInit {
     this.api.getMapConfiguration().subscribe((config) => {
       this.configuration = config;
       const grid: GridItem[] = Array.isArray(this.configuration.grid) ? this.configuration.grid : [];
-      this.blockedGridItems = grid.filter((item) => this.isBlockedItem(item) || this.isForcedBlockedId(item?.item?.id));
-      this.configuration.grid = grid.filter((item) => !this.isBlockedItem(item) && !this.isForcedBlockedId(item?.item?.id));
+      this.blockedGridItems = grid.filter((item) => this.isBlockedItem(item));
+      this.configuration.grid = grid.filter((item) => !this.isBlockedItem(item));
       this.dim = this.configuration.dim;
       this.ready.next();
       this.ready.complete();
@@ -235,7 +234,7 @@ export class MapComponent implements OnInit, AfterViewInit {
             this.api.getImage(expectedId).pipe(
               map((item: any) => {
                 const existsInGrid = this.configuration?.grid?.some((gridItem: GridItem) => gridItem.item.id === expectedId);
-                if (!existsInGrid || this.isForcedBlockedId(expectedId)) {
+                if (!existsInGrid) {
                   this.blockItemById(expectedId);
                   expectedId = null;
                   return null;
