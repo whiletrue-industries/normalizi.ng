@@ -1,7 +1,7 @@
 @if (phase === 0) {
   <app-modal [open]='open' [hide_close]='true' [hide_actions]='true' [wide]='true'>
     <span class='header'>Got it. Thank you!</span>
-    @if (ownImageId) {
+    @if (confirmationImageId) {
       <div class='confirmation-photo'>
         <app-moving-image [src]='ownFaceImage' [index]='4' [id]='confirmationImageAnimationId'></app-moving-image>
       </div>

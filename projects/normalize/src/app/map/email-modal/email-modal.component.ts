@@ -1,5 +1,5 @@
 import { ElementRef, OnDestroy, ViewChild } from '@angular/core';
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { debounceTime, first } from 'rxjs/operators';
 import { ApiService } from '../../api.service';
@@ -12,7 +12,7 @@ import { StateService } from '../../state.service';
     styleUrls: ['./email-modal.component.less'],
     standalone: false
 })
-export class EmailModalComponent implements OnInit, OnDestroy {
+export class EmailModalComponent implements OnInit, OnDestroy, OnChanges {
 
   @Input() open = true;
   @Output() closed = new EventEmitter<string>();
@@ -24,6 +24,8 @@ export class EmailModalComponent implements OnInit, OnDestroy {
   phase = 0;
 
   countdownSeconds: number | null = null;
+  fallbackImageID: string | null = null;
+  isLoadingFallbackImage = false;
 
   private autoDeleteTimerHandle: ReturnType<typeof setTimeout> | null = null;
   private countdownIntervalHandle: ReturnType<typeof setInterval> | null = null;
@@ -35,6 +37,7 @@ export class EmailModalComponent implements OnInit, OnDestroy {
   constructor(private api: ApiService, private state: StateService, public imageFetcher: ImageFetcherService) { }
 
   ngOnInit(): void {
+    this.ensureConfirmationImage();
     this.startAutoDeleteTimer();
     this.triggerEmailTimeout.pipe(
       debounceTime(30000),
@@ -48,6 +51,12 @@ export class EmailModalComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.clearTimers();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes.open?.currentValue === true) {
+      this.ensureConfirmationImage();
+    }
   }
 
   private startAutoDeleteTimer(): void {
@@ -87,7 +96,32 @@ export class EmailModalComponent implements OnInit, OnDestroy {
 
   backToConfirmation(): void {
     this.phase = 0;
+    this.ensureConfirmationImage();
     this.startAutoDeleteTimer();
+  }
+
+  private ensureConfirmationImage(): void {
+    if (this.confirmationImageId || this.isLoadingFallbackImage) {
+      return;
+    }
+    const ownItemID = this.state.getOwnItemID();
+    if (!Number.isFinite(ownItemID) || ownItemID <= 0) {
+      return;
+    }
+    this.isLoadingFallbackImage = true;
+    this.api.getImage(ownItemID).pipe(first()).subscribe({
+      next: (item: any) => {
+        if (item?.image) {
+          this.fallbackImageID = item.image;
+        }
+      },
+      error: () => {
+        this.fallbackImageID = null;
+      },
+      complete: () => {
+        this.isLoadingFallbackImage = false;
+      }
+    });
   }
 
   retake(): void {
@@ -150,15 +184,22 @@ export class EmailModalComponent implements OnInit, OnDestroy {
   }
 
   get ownFaceImage() {
-    return this.imageFetcher.fetchImage(this.state.getOwnImageID());
+    if (!this.confirmationImageId) {
+      return null;
+    }
+    return this.imageFetcher.fetchImage(this.confirmationImageId);
   }
 
   get ownImageId() {
     return this.state.getOwnImageID();
   }
 
+  get confirmationImageId() {
+    return this.ownImageId || this.fallbackImageID;
+  }
+
   get confirmationImageAnimationId() {
-    return this.ownImageId ? `${this.ownImageId}-confirmation` : 'confirmation-image';
+    return this.confirmationImageId ? `${this.confirmationImageId}-confirmation` : 'confirmation-image';
   }
 }
 
