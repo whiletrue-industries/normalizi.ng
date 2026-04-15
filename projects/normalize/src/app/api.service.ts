@@ -5,6 +5,7 @@ import { map, switchMap, tap } from 'rxjs/operators';
 
 import { environment } from '../environments/environment';
 import { ImageItem } from './datatypes';
+import { debugLog } from './logger';
 import { StateService } from './state.service';
 
 @Injectable({
@@ -59,18 +60,26 @@ export class ApiService {
   }
 
   sendEmail(email) {
+    if (!this.state.hasValidPrivateLinkData()) {
+      debugLog('Skipping sendEmail due to invalid private-link data', {
+        own_id: this.state.getOwnItemID(),
+        image_id: this.state.getOwnImageID(),
+        magic: this.state.getMagic()
+      });
+      return from([true]);
+    }
     return from([true]).pipe(
       map(() => {
         const link = this.state.getPrivateUrl();
         const own_id = this.state.getOwnItemID();
         const magic = this.state.getMagic();
         const body = {email, link, own_id, magic};
-        console.log('EMAIL PARAMS', body);
+        debugLog('EMAIL PARAMS', body);
         return body;
       }),
       switchMap((body) => this.http.post(environment.endpoints.sendEmail, body)),
       tap((res) => {
-        console.log('SENT EMAIL RESULT', res);
+        debugLog('SENT EMAIL RESULT', res);
       })
     );
   }

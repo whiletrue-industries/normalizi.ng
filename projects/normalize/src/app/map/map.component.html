@@ -1,12 +1,13 @@
-<app-output-map [grid]='grid'></app-output-map>
+<app-output-map [grid]='grid' [class.suppressed-ui]='confirmationModalOpen'></app-output-map>
 @if (false) {
   <app-feature-selector [feature]='feature' (selected)='feature = $event'></app-feature-selector>
 }
 @if (overlay) {
-  <div class='overlay' (click)='overlay = false; drawerOpen = false'></div>
+  <div class='overlay suppressed-ui' [class.suppressed-ui]='confirmationModalOpen' (click)='overlay = false; drawerOpen = false'></div>
 }
 <app-drawer [open]='drawerOpen' [hidden]='consentModalOpen || deleteModalOpen' (changed)='overlay = false; drawerOpen = $event'
   [class.focused]='focusedState'
+  [class.suppressed-ui]='confirmationModalOpen'
   >
   @if (!focusedItem) {
     <app-about-card [showStart]='!hasSelfie' (start)='start()'></app-about-card>
@@ -16,18 +17,18 @@
   }
 </app-drawer>
 @if (!hasSelfie) {
-  <app-start-button label='start' [class.offseted]='layout.desktop && drawerOpen' (click)='start()'></app-start-button>
+  <app-start-button label='start' [class.offseted]='layout.desktop && drawerOpen' [class.suppressed-ui]='confirmationModalOpen' (click)='start()'></app-start-button>
 }
 @if (hasSelfie && ownGI) {
-  <app-focus-button label='start' [class.offseted]='layout.desktop && drawerOpen' (click)='focusOnSelf()'></app-focus-button>
+  <app-focus-button label='start' [class.offseted]='layout.desktop && drawerOpen' [class.suppressed-ui]='confirmationModalOpen' (click)='focusOnSelf()'></app-focus-button>
 }
 @if (!drawerOpen || !!focusedItem) {
-  <img class='info-button' (click)='focusedItem=null; drawerOpen=true' src='/assets/img/info-button.svg'>
+  <img class='info-button suppressed-ui' [class.suppressed-ui]='confirmationModalOpen' (click)='focusedItem=null; drawerOpen=true' src='/assets/img/info-button.svg'>
 }
 @if (definition) {
-  <app-definition imgSrc='def-step3.png' (closed)='definitionClosed.next()'></app-definition>
+  <app-definition class='suppressed-ui' [class.suppressed-ui]='confirmationModalOpen' imgSrc='def-step3.png' (closed)='definitionClosed.next()'></app-definition>
 }
 <app-consent-modal [open]='consentModalOpen' (closed)='consentModalOpen = false'></app-consent-modal>
-<app-email-modal [open]='emailModalOpen' (closed)='emailModalOpen = false'></app-email-modal>
+<app-email-modal [open]='emailModalOpen' (closed)='handleEmailModalClosed($event)'></app-email-modal>
 <app-redirect-modal [open]='redirectModalOpen' (closed)='redirectModalOpen = false'></app-redirect-modal>
-<app-delete-modal [open]='deleteModalOpen' (closed)='deleteModalOpen = false'></app-delete-modal>
+<app-delete-modal [open]='deleteModalOpen' [image]='focusedItem?.item?.image' (closed)='handleDeleteModalClosed($event)'></app-delete-modal>
