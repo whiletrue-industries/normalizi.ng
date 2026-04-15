@@ -486,10 +486,6 @@ export class MapComponent implements OnInit, AfterViewInit {
     return Number(allowedValue) === -1;
   }
 
-  private isForcedBlockedId(itemID: number): boolean {
-    return Number.isFinite(itemID) && this.forcedBlockedIds.has(itemID);
-  }
-
   focusOnSelf() {
     this.drawerOpen = false;
     const pos = this.ownGI.pos;
