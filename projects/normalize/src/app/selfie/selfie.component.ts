@@ -65,6 +65,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   private promptInTimeout: ReturnType<typeof setTimeout> | null = null;
   private ringHideTimeout: ReturnType<typeof setTimeout> | null = null;
   private ringRevealAnimationFrameId: number | null = null;
+  private ringAnimationFrameId: number | null = null;
 
   public svgHack = false;
   public _allowed = false;
@@ -72,6 +73,17 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly captureButtonRingLength = 188.5;
   public captureButtonRingOffset = 0;
   readonly ringTransitionMs = 200;
+  private readonly ringSmoothingAlpha = 0.24;
+  private readonly ringSmoothingEpsilon = 0.1;
+  private readonly ringParallaxFactors = [0.00, 0.12, 0.24, 0.36, 0.50, 0.66, 0.82];
+  public ringTransforms = this.ringParallaxFactors.map(() => 'translate3d(0px, 0px, 0)');
+  public centerRingTransformValue = 'translate3d(0px, 0px, 0) scale(1)';
+  private ringTargetX = 0;
+  private ringTargetY = 0;
+  private ringTargetScale = 1;
+  private ringRenderX = 0;
+  private ringRenderY = 0;
+  private ringRenderScale = 1;
 
 
   constructor(private faceProcessor: FaceProcessorService, private api: ApiService, private state: StateService,
@@ -240,6 +252,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
           this.showConfirmedOverlay = false;
           this.dynamicRingsConfirmed = false;
           this.faceScale.set(1);
+          this.updateRingTransforms(true);
         } else if (event.kind === 'transform') {
           this.transform = event.transform;
           this.transformOrigin = event.transformOrigin;
@@ -401,6 +414,11 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
       cancelAnimationFrame(this.ringRevealAnimationFrameId);
       this.ringRevealAnimationFrameId = null;
     }
+
+    if (this.ringAnimationFrameId !== null) {
+      cancelAnimationFrame(this.ringAnimationFrameId);
+      this.ringAnimationFrameId = null;
+    }
   }
 
   private animateRingsFromCenter(targetX: number, targetY: number) {
@@ -412,16 +430,19 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
       this.showDynamicRings = true;
       this.faceOffsetX.set(0);
       this.faceOffsetY.set(0);
+      this.updateRingTransforms(true);
       this.ringRevealAnimationFrameId = requestAnimationFrame(() => {
         this.ringRevealAnimationFrameId = null;
         this.faceOffsetX.set(targetX);
         this.faceOffsetY.set(targetY);
+        this.updateRingTransforms();
       });
       return;
     }
 
     this.faceOffsetX.set(targetX);
     this.faceOffsetY.set(targetY);
+    this.updateRingTransforms();
   }
 
   private animateRingsToCenter(showConfirmedOverlay: boolean) {
@@ -432,16 +453,19 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
       this.showConfirmedOverlay = showConfirmedOverlay;
       this.faceOffsetX.set(0);
       this.faceOffsetY.set(0);
+      this.updateRingTransforms(true);
       return;
     }
 
     this.faceOffsetX.set(0);
     this.faceOffsetY.set(0);
+    this.updateRingTransforms();
     this.ringHideTimeout = setTimeout(() => {
       this.showDynamicRings = false;
       this.showConfirmedOverlay = showConfirmedOverlay;
       this.dynamicRingsConfirmed = false;
       this.ringHideTimeout = null;
+      this.updateRingTransforms(true);
     }, this.ringTransitionMs);
   }
 
@@ -449,22 +473,74 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
     return null;
   }
 
-  ringTransform(t: number): string {
-    const x = this.faceOffsetX() * t;
-    const y = this.faceOffsetY() * t;
-    return `translate(${x}px, ${y}px)`;
-  }
+  private updateRingTransforms(immediate = false) {
+    this.ringTargetX = this.faceOffsetX();
+    this.ringTargetY = this.faceOffsetY();
 
-  centerRingTransform(t: number): string {
     if (this.dynamicRingsConfirmed) {
-      return 'translate(0px, 0px) scale(1)';
+      this.ringTargetScale = 1;
+    } else {
+      const scale = this.faceScale();
+      this.ringTargetScale = Number.isFinite(scale) && scale > 0 ? 1 / scale : 1;
     }
 
-    const x = this.faceOffsetX() * t;
-    const y = this.faceOffsetY() * t;
-    const scale = this.faceScale();
-    const inverseScale = Number.isFinite(scale) && scale > 0 ? 1 / scale : 1;
-    return `translate(${x}px, ${y}px) scale(${inverseScale})`;
+    if (immediate) {
+      this.ringRenderX = this.ringTargetX;
+      this.ringRenderY = this.ringTargetY;
+      this.ringRenderScale = this.ringTargetScale;
+      this.applyRingTransforms();
+      return;
+    }
+
+    this.startRingAnimationLoop();
+  }
+
+  private startRingAnimationLoop() {
+    if (this.ringAnimationFrameId !== null) {
+      return;
+    }
+
+    const step = () => {
+      const alpha = this.ringSmoothingAlpha;
+      this.ringRenderX += (this.ringTargetX - this.ringRenderX) * alpha;
+      this.ringRenderY += (this.ringTargetY - this.ringRenderY) * alpha;
+      this.ringRenderScale += (this.ringTargetScale - this.ringRenderScale) * alpha;
+
+      const doneX = Math.abs(this.ringTargetX - this.ringRenderX) < this.ringSmoothingEpsilon;
+      const doneY = Math.abs(this.ringTargetY - this.ringRenderY) < this.ringSmoothingEpsilon;
+      const doneScale = Math.abs(this.ringTargetScale - this.ringRenderScale) < 0.001;
+
+      if (doneX) {
+        this.ringRenderX = this.ringTargetX;
+      }
+      if (doneY) {
+        this.ringRenderY = this.ringTargetY;
+      }
+      if (doneScale) {
+        this.ringRenderScale = this.ringTargetScale;
+      }
+
+      this.applyRingTransforms();
+
+      if (doneX && doneY && doneScale) {
+        this.ringAnimationFrameId = null;
+        return;
+      }
+
+      this.ringAnimationFrameId = requestAnimationFrame(step);
+    };
+
+    this.ringAnimationFrameId = requestAnimationFrame(step);
+  }
+
+  private applyRingTransforms() {
+    const baseX = this.ringRenderX;
+    const baseY = this.ringRenderY;
+    for (let i = 0; i < this.ringParallaxFactors.length; i++) {
+      const t = this.ringParallaxFactors[i];
+      this.ringTransforms[i] = `translate3d(${baseX * t}px, ${baseY * t}px, 0)`;
+    }
+    this.centerRingTransformValue = `translate3d(${baseX}px, ${baseY}px, 0) scale(${this.ringRenderScale})`;
   }
 
   ngOnDestroy() {
