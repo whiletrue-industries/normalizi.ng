@@ -1,1 +1,32 @@
 @import '../../modal/modal-common-content.less';
+
+.deleting-state {
+    display: flex;
+    flex-flow: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px 0;
+
+    span {
+        .font-source-sans;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: @color-dark-brown;
+        opacity: 0.5;
+    }
+}
+
+.deleting-spinner {
+    width: 28px;
+    height: 28px;
+    border: 2px solid @color-offtint;
+    border-top-color: @color-dark-brown;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

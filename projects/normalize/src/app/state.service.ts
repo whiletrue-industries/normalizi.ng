@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, ReplaySubject, Subject } from 'rxjs';
+import { BehaviorSubject, ReplaySubject } from 'rxjs';
 import { delay, first } from 'rxjs/operators';
 import { ImageItem } from './datatypes';
 import { Galleries } from './galleries';
+import { debugLog } from './logger';
 
 @Injectable({
   providedIn: 'root'
@@ -30,11 +31,12 @@ export class StateService {
   needsEmail = new ReplaySubject<void>(1);
   votedSelf = 0;
   gallery = false;
+  lastDeletedOwnItemID: number = null;
   networkQueueLength = new BehaviorSubject<number>(0);
 
   constructor() {
     this.checkUrlParameters();
-    try {      
+    try {
       this.itemID = parseInt(window.localStorage.getItem(this.OWN_ID_KEY));
     } catch (e) {
       this.itemID = null;
@@ -76,7 +78,17 @@ export class StateService {
   }
 
   getPrivateUrl() {
+    if (!this.hasValidPrivateLinkData()) {
+      return null;
+    }
     return `https://normalizi.ng/?i=${this.itemID}&u=${this.imageID}&m=${this.magic}`;
+  }
+
+  hasValidPrivateLinkData() {
+    const validItemID = Number.isFinite(this.itemID) && this.itemID > 0;
+    const validImageID = !!this.imageID && this.imageID !== 'null' && this.imageID !== 'undefined';
+    const validMagic = !!this.magic && this.magic !== 'null' && this.magic !== 'undefined';
+    return validItemID && validImageID && validMagic;
   }
 
   setOwnInfo(value) {
@@ -86,6 +98,7 @@ export class StateService {
     this.descriptor = value.descriptor || this.descriptor;
     this.landmarks = value.landmarks || this.landmarks;
     this.gender_age = value.gender_age || this.gender_age;
+    this.lastDeletedOwnItemID = null;
     window.localStorage.setItem(this.OWN_ID_KEY, this.itemID + '');
     if (this.imageID && this.imageID.length < 64) {
       window.localStorage.setItem(this.OWN_IMAGE_KEY, this.imageID);
@@ -113,12 +126,24 @@ export class StateService {
     this.votedSelf = 1;
   }
 
-  getVotedSelf() { 
+  getVotedSelf() {
     return this.votedSelf;
   }
-  
+
   getOwnItemID() {
     return this.itemID;
+  }
+
+  setLastDeletedOwnItemID(itemID: number) {
+    this.lastDeletedOwnItemID = itemID;
+  }
+
+  getLastDeletedOwnItemID() {
+    return this.lastDeletedOwnItemID;
+  }
+
+  clearLastDeletedOwnItemID() {
+    this.lastDeletedOwnItemID = null;
   }
 
   getOwnImageID() {
@@ -148,7 +173,7 @@ export class StateService {
   getPlaceName() {
     return this.place_name;
   }
-  
+
   getPlayed() {
     return this.played;
   }
@@ -178,12 +203,12 @@ export class StateService {
       if (coords && Array.isArray(coords)) {
         this.setGeolocation(JSON.parse(coordsJson));
         this.gallery = true;
-        console.log('IN GALLERY @', coordsJson);
-        return;  
+        debugLog('IN GALLERY @', coordsJson);
+        return;
       }
-    } catch(e) {
+    } catch (e) {
     }
-    console.log('NOT IN GALLERY');
+    debugLog('NOT IN GALLERY');
   }
 
   pushRequest(request) {
@@ -195,10 +220,10 @@ export class StateService {
     if (this.handlingRequest) {
       return;
     }
-    console.log('networkQueueLength', this.requests.length);
+    debugLog('networkQueueLength', this.requests.length);
     this.networkQueueLength.next(this.requests.length);
     if (this.requests.length === 0) {
-      return
+      return;
     }
     const request = this.requests.shift();
     this.handlingRequest = true;
@@ -229,12 +254,23 @@ export class StateService {
   }
 
   checkItem(item: ImageItem) {
+    if (!item || !Number.isFinite(item.id) || !item.image) {
+      debugLog('checkItem: invalid item payload, clearing stale own identity without reload', item);
+      this.clear();
+      return false;
+    }
     if (
       (item.id !== this.getOwnItemID()) ||
       (item.image !== this.getOwnImageID())
     ) {
-      this.fullClear();
-      window.location.reload();
+      debugLog('checkItem: own item mismatch, clearing stale own identity without reload', {
+        expectedId: this.getOwnItemID(),
+        actualId: item.id,
+        expectedImage: this.getOwnImageID(),
+        actualImage: item.image,
+      });
+      this.clear();
+      return false;
     }
     return true;
   }

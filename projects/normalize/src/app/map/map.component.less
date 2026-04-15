@@ -5,6 +5,15 @@
     height: 100%;
     overflow: hidden;
     overscroll-behavior: none;
+
+    &.confirmation-open {
+        background-color: @color-dark-brown;
+    }
+
+    .suppressed-ui {
+        visibility: hidden;
+        pointer-events: none;
+    }
     
     app-feature-selector {
         position: absolute;
