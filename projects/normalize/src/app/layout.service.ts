@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { fromEvent } from 'rxjs';
+import { debugLog } from './logger';
 
 @Injectable({
   providedIn: 'root'
@@ -27,7 +28,7 @@ export class LayoutService {
       this.desktop = this.nativeElement.offsetWidth >= 600;
       this.layout = this.mobile ? 'mobile' : 'desktop';
       this.height = this.nativeElement.offsetHeight;
-      console.log('LAYOUT', this.layout);
+      debugLog('LAYOUT', this.layout);
     }
   }
 

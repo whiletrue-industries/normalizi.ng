@@ -36,6 +36,11 @@
               "projects/normalize/src/styles.less",
               "node_modules/leaflet/dist/leaflet.css"
             ],
+            "allowedCommonJsDependencies": [
+              "leaflet",
+              "showdown",
+              "@tensorflow/tfjs-core"
+            ],
             "scripts": [],
             "vendorChunk": true,
             "extractLicenses": false,

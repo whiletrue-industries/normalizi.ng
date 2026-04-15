@@ -4,6 +4,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { map } from 'rxjs/operators';
 
 import * as showdown from 'showdown';
+import { debugLog } from '../../logger';
 
 @Component({
     selector: 'app-about-card',
@@ -30,7 +31,7 @@ export class AboutCardComponent implements OnInit {
         this.html = this.sanitizer.bypassSecurityTrustHtml(html);
       })
     ).subscribe(() => {
-      console.log('ABOUT loaded');
+      debugLog('ABOUT loaded');
     });
   }
 
