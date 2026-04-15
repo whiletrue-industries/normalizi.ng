@@ -51,7 +51,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   public showDynamicRings = false;
   public showConfirmedOverlay = false;
   public dynamicRingsConfirmed = false;
-  public faceScale = 1;
+  public faceScale = signal(1);
 
   public orientation = '';
   public scale = '';
@@ -447,6 +447,18 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
 
   get ringFilterAttr(): string | null {
     return null;
+  }
+
+  ringTransform(t: number): string {
+    const x = this.faceOffsetX() * t;
+    const y = this.faceOffsetY() * t;
+    return `translate(${x}px, ${y}px)`;
+  }
+
+  centerRingTransform(t: number): string {
+    const x = this.faceOffsetX() * t;
+    const y = this.faceOffsetY() * t;
+    return `translate(${x}px, ${y}px) scale(${this.faceScale()})`;
   }
 
   ngOnDestroy() {
