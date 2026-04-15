@@ -15,13 +15,13 @@
 <div class='video'>
   <video #inputVideo [autoplay]='true' [muted]='true' [volume]='0' playsinline
     [style.transform]='transform' [style.transform-origin]='transformOrigin'
-    [class.no-detection]='!detected'
+    [class.no-detection]='!detected()'
   ></video>
   @if (videoHeight) {
     <div class='face-mask-overlay'>
       <img [class.visible]='!showDynamicRings && !showConfirmedOverlay' src='assets/img/frame-overlay.svg' [style.transform]='maskOverlayTransform'>
       @if (showDynamicRings) {
-        <svg class='dynamic-rings' width='1000' height='516' viewBox='0 0 1000 516' fill='none' xmlns='http://www.w3.org/2000/svg' [style.transform]='maskOverlayTransform'>
+        <svg class='dynamic-rings' width='1000' height='516' viewBox='0 0 1000 516' fill='none' xmlns='http://www.w3.org/2000/svg' aria-hidden='true' focusable='false' [style.transform]='maskOverlayTransform'>
           <path fill-rule='evenodd' clip-rule='evenodd' d='M1000 0H0V516H1000V0ZM500 179C455.817 179 420 214.817 420 259C420 303.183 455.817 339 500 339C544.183 339 580 303.183 580 259C580 214.817 544.183 179 500 179Z' [attr.fill]='dynamicRingsConfirmed ? "#038100" : "#AD0000"' fill-opacity='0.33'></path>
           <defs>
             <filter id='ring-glow-red' x='-50%' y='-50%' width='200%' height='200%' color-interpolation-filters='sRGB'>
@@ -96,7 +96,7 @@
     </div>
   }
 </div>
-@if (detected) {
+@if (detected()) {
   <button class='shutter' type='button' aria-label='Capture' (touchstart)='setAllowed($event, true)' (click)='setAllowed($event, true)'>
     <svg viewBox='0 0 72 72' aria-hidden='true' focusable='false'>
       <circle cx='36' cy='36' r='26' fill='white'></circle>
