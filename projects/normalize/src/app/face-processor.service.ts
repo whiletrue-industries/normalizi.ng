@@ -215,8 +215,9 @@ export class FaceProcessorService {
         //   scale = 1;
         // }
         const distance = Math.sqrt((trackedCenter.x - canvas.width*0.5)**2 + (trackedCenter.y - canvas.height*0.6)**2);
-        // Mirror X to match the selfie UI's horizontal flip.
-        const faceOffsetX = -(trackedCenter.x - canvas.width / 2) * ratio;
+        // The selfie viewport is mirrored at the container level, so keep
+        // tracking offsets in source coordinates to avoid double inversion.
+        const faceOffsetX = (trackedCenter.x - canvas.width / 2) * ratio;
         const faceOffsetY = (trackedCenter.y - canvas.height / 2) * ratio;
   
         const snapRatio = snapped ? 2 : 1;
