@@ -57,12 +57,16 @@ export class MapComponent implements OnInit, AfterViewInit {
   redirectModalOpen = false;
   emailModalOpen = false;
   deleteModalOpen = false;
+  blockedGridItems: GridItem[] = [];
+  blockedMasks: L.Rectangle[] = [];
 
   private readonly transitionEase = 0.12;
   private readonly zoomOutDurationSec = 1.35;
   private readonly zoomInDurationSec = 1.65;
   private readonly drawerMoveDurationSec = 1.1;
   private readonly mapBackgroundColor = '#EAE7DF';
+  private readonly blockedMaskColor = '#2D2C29';
+  private readonly forcedBlockedIds = new Set<number>([30557]);
 
   @ViewChild(OutputMapComponent) mapElement: OutputMapComponent;
   @ViewChild(EmailModalComponent) emailModal: EmailModalComponent;
@@ -75,6 +79,9 @@ export class MapComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     this.api.getMapConfiguration().subscribe((config) => {
       this.configuration = config;
+      const grid: GridItem[] = Array.isArray(this.configuration.grid) ? this.configuration.grid : [];
+      this.blockedGridItems = grid.filter((item) => this.isBlockedItem(item) || this.isForcedBlockedId(item?.item?.id));
+      this.configuration.grid = grid.filter((item) => !this.isBlockedItem(item) && !this.isForcedBlockedId(item?.item?.id));
       this.dim = this.configuration.dim;
       this.ready.next();
       this.ready.complete();
@@ -89,11 +96,22 @@ export class MapComponent implements OnInit, AfterViewInit {
     }, 0);
     let start = this.state.gallery ? from([false]) : from([true]);
     let suppressOwnImageOnLoad = false;
+    let holdZoomForEmailFlow = false;
+    let pendingEmailModalOpen = false;
+    this.definitionClosed.subscribe(() => {
+      this.definition = false;
+      if (pendingEmailModalOpen) {
+        this.emailModalOpen = true;
+        pendingEmailModalOpen = false;
+      }
+    });
     this.state.needsEmail.subscribe(() => {
       debugLog('NEEDS EMAIL');
       this.definition = true;
       if (this.state.getOwnItemID() && !this.state.getAskedForEmail()) {
-        this.emailModalOpen = true;
+        holdZoomForEmailFlow = true;
+        pendingEmailModalOpen = true;
+        this.emailModalOpen = false;
         if (!this.state.gallery) {
           start = this.emailModal.closed.pipe(
             filter((action: string) => action === 'added' || action === 'deleted'),
@@ -127,6 +145,7 @@ export class MapComponent implements OnInit, AfterViewInit {
         // Create map
         this.map = this.mapElement.getMap(this.configuration);
         this.feature = 'faces';
+        this.applyBlockedMasks();
         // Map events
         this.map.on('zoomend', (ev) => { return this.onZoomChange(); });
         this.map.on('moveend', (ev) => { return this.onBoundsChange(); });
@@ -159,9 +178,9 @@ export class MapComponent implements OnInit, AfterViewInit {
       }),
       tap(() => { // SET UP TSNE OVERLAY
         this.tsneOverlay = new TSNEOverlay(this.map, this.grid, this.configuration.dim, this.fetchImage);
-        const items: Observable<ImageItem>[] = [];
+        const items: Observable<ImageItem | null>[] = [];
 
-        let expectedId = suppressOwnImageOnLoad ? null : this.state.getOwnItemID();
+        let expectedId = (suppressOwnImageOnLoad || holdZoomForEmailFlow) ? null : this.state.getOwnItemID();
         if (!suppressOwnImageOnLoad && this.state.getOwnImageID()) {
           if (this.state.getDescriptor()) {
             const gl = this.state.getGeolocation();
@@ -199,21 +218,41 @@ export class MapComponent implements OnInit, AfterViewInit {
                 }),
               )
             );
-            expectedId = null;
           }
         }
         const sharedId = this.state.urlSearchParam('id');
         if (sharedId) {
           expectedId = parseInt(sharedId);
           items.push(
-            this.api.getImage(expectedId)
+            this.api.getImage(expectedId).pipe(
+              map((item: any) => {
+                const existsInGrid = this.configuration?.grid?.some((gridItem: GridItem) => gridItem.item.id === expectedId);
+                if (!existsInGrid || this.isForcedBlockedId(expectedId)) {
+                  this.blockItemById(expectedId);
+                  expectedId = null;
+                  return null;
+                }
+                if (this.isBlockedItem(item)) {
+                  this.blockItemById(expectedId);
+                  expectedId = null;
+                  return null;
+                }
+                return item as ImageItem;
+              }),
+              catchError(() => {
+                this.blockItemById(expectedId);
+                expectedId = null;
+                return from([null]);
+              })
+            )
           );
         }
         if (items.length > 0) {
           let targetGi = null;
           merge(...items).pipe(
+            filter((item: ImageItem | null) => item !== null),
             mergeMap((item) => {
-              return this.tsneOverlay.addImageLayer(item);
+              return this.tsneOverlay.addImageLayer(item as ImageItem);
             }),
             tap((gi) => {
               if (gi.item.id === expectedId) {
@@ -223,7 +262,7 @@ export class MapComponent implements OnInit, AfterViewInit {
                 this.ownGI = gi;
               }
             }),
-            last(),
+            last(undefined, null),
             switchMap(() => this.definitionClosed),
             map(() => {
               let center: L.LatLngExpression = null;
@@ -255,6 +294,9 @@ export class MapComponent implements OnInit, AfterViewInit {
           });          
         }
         this.grid.next(this.configuration.grid);
+        if (suppressOwnImageOnLoad || this.state.getLastDeletedOwnItemID()) {
+          this.coverDeletedFace();
+        }
       })
     ).subscribe(() => {
       debugLog('FINISHED VIEW INIT');
@@ -326,6 +368,14 @@ export class MapComponent implements OnInit, AfterViewInit {
     this.deleteModalOpen = true
   }
 
+  handleDeleteModalClosed(deleted: boolean): void {
+    this.deleteModalOpen = false;
+    if (deleted) {
+      this.hasSelfie = false;
+      this.coverDeletedFace();
+    }
+  }
+
   handleEmailModalClosed(action: string): void {
     this.emailModalOpen = false;
     if (action === 'retake') {
@@ -345,6 +395,9 @@ export class MapComponent implements OnInit, AfterViewInit {
   }
 
   private coverDeletedFace(): void {
+    const deletedOwnItemID = this.state.getLastDeletedOwnItemID();
+    const deletedGridItem = this.ownGI || this.configuration.grid.find((item) => item.item.id === deletedOwnItemID);
+
     if (this.map) {
       this.overlay = false;
       this.focusedItem = null;
@@ -355,30 +408,79 @@ export class MapComponent implements OnInit, AfterViewInit {
       this.drawerOpen = false;
     }
 
-    if (this.ownGI && this.map) {
+    if (deletedGridItem && this.map) {
       if (this.tsneOverlay) {
-        this.tsneOverlay.removeImageLayer(this.ownGI.item);
+        this.tsneOverlay.removeImageLayer(deletedGridItem.item);
       }
-      const pos = this.ownGI.pos;
+      const pos = deletedGridItem.pos;
       L.rectangle(
         [[-pos.y - 1, pos.x], [-pos.y, pos.x + 1]] as L.LatLngBoundsExpression,
         { color: 'transparent', weight: 0, fillColor: this.mapBackgroundColor, fillOpacity: 1, interactive: false }
       ).addTo(this.map);
-      const idx = this.configuration.grid.indexOf(this.ownGI);
+      const idx = this.configuration.grid.indexOf(deletedGridItem);
       if (idx !== -1) {
         this.configuration.grid.splice(idx, 1);
         this.grid.next(this.configuration.grid);
       }
-      if (this.focusedItem === this.ownGI) {
+      if (this.focusedItem === deletedGridItem) {
         this.focusedItem = null;
         this.drawerOpen = false;
       }
       this.ownGI = null;
+      this.state.clearLastDeletedOwnItemID();
     }
 
     if (this.map) {
       this.flyToSmooth(this.map.getCenter(), this.maxZoom - 5, this.zoomOutDurationSec).subscribe();
     }
+  }
+
+  private blockItemById(itemID: number): void {
+    if (!Number.isFinite(itemID) || !this.configuration?.grid) {
+      return;
+    }
+    const idx = this.configuration.grid.findIndex((item) => item.item.id === itemID);
+    if (idx !== -1) {
+      const [blocked] = this.configuration.grid.splice(idx, 1);
+      this.blockedGridItems.push(blocked);
+      this.grid.next(this.configuration.grid);
+      this.addBlockedMask(blocked);
+    }
+  }
+
+  private applyBlockedMasks(): void {
+    if (!this.map) {
+      return;
+    }
+    this.blockedMasks.forEach((mask) => mask.remove());
+    this.blockedMasks = [];
+    this.blockedGridItems.forEach((item) => {
+      this.addBlockedMask(item);
+    });
+  }
+
+  private addBlockedMask(item: GridItem): void {
+    if (!this.map || !item?.pos) {
+      return;
+    }
+    const pos = item.pos;
+    const mask = L.rectangle(
+      [[-pos.y - 1, pos.x], [-pos.y, pos.x + 1]] as L.LatLngBoundsExpression,
+      { color: 'transparent', weight: 0, fillColor: this.blockedMaskColor, fillOpacity: 1, interactive: false }
+    ).addTo(this.map);
+    this.blockedMasks.push(mask);
+  }
+
+  private isBlockedItem(item: any): boolean {
+    if (!item) {
+      return false;
+    }
+    const allowedValue = item?.item?.allowed ?? item?.allowed;
+    return Number(allowedValue) === -1;
+  }
+
+  private isForcedBlockedId(itemID: number): boolean {
+    return Number.isFinite(itemID) && this.forcedBlockedIds.has(itemID);
   }
 
   focusOnSelf() {

@@ -113,9 +113,13 @@ export class EmailModalComponent implements OnInit, OnDestroy {
   private doDelete(): void {
     this.clearTimers();
     this.countdownSeconds = null;
-    this.state.pushRequest(this.api.deleteOwnItem());
-    this.state.fullClear();
-    this.closed.emit('deleted');
+    this.state.setLastDeletedOwnItemID(this.state.getOwnItemID());
+    this.api.deleteOwnItem().pipe(
+      first()
+    ).subscribe(() => {
+      this.state.fullClear();
+      this.closed.emit('deleted');
+    });
   }
 
   submitEmail(): void {
@@ -146,11 +150,15 @@ export class EmailModalComponent implements OnInit, OnDestroy {
   }
 
   get ownFaceImage() {
-    return this.imageFetcher.fetchFaceImage(this.state.getOwnImageID());
+    return this.imageFetcher.fetchImage(this.state.getOwnImageID());
   }
 
   get ownImageId() {
     return this.state.getOwnImageID();
+  }
+
+  get confirmationImageAnimationId() {
+    return this.ownImageId ? `${this.ownImageId}-confirmation` : 'confirmation-image';
   }
 }
 

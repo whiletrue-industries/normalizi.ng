@@ -8,7 +8,7 @@
     @if (!hide_actions) {
       <div class='actions'>
         @if (cancel_text) {
-          <a class='cancel_button' (click)='close(false)'>{{cancel_text}}</a>
+          <a class='cancel_button' [class.preserve-case]='cancel_text_preserve_case' (click)='close(false)'>{{cancel_text}}</a>
         }
         <button class='submit_button' [class.allowed]='submit_allowed' (click)='close(true)'>{{submit_text}}</button>
       </div>

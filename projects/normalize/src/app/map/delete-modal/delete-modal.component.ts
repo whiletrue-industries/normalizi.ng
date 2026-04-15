@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { first } from 'rxjs/operators';
 import { ApiService } from '../../api.service';
-import { ImageItem } from '../../datatypes';
 import { ImageFetcherService } from '../../image-fetcher.service';
 import { StateService } from '../../state.service';
 
@@ -13,6 +13,7 @@ import { StateService } from '../../state.service';
 export class DeleteModalComponent implements OnInit {
 
   @Input() open = true;
+  @Input() image = null;
   @Output() closed = new EventEmitter<boolean>();
 
   phase = 0;
@@ -31,24 +32,14 @@ export class DeleteModalComponent implements OnInit {
     this.phase = 0;
   }
 
-  complete() {
-    this.submit_text = 'ok';
-    this.cancel_text = null;
-    this.phase = 1;
-  }
-
   close(value) {
-    if (this.phase === 1) {
-      this.closed.next(true);
-      return;
-    }
     if (value) {
       if (this.phase === 0) {
-        this.api.deleteOwnItem().subscribe(() => {
+        this.state.setLastDeletedOwnItemID(this.state.getOwnItemID());
+        this.api.deleteOwnItem().pipe(first()).subscribe(() => {
           this.state.fullClear();
-          window.location.reload();
+          this.closed.next(true);
         });
-        this.complete();
       }
     } else {
       this.closed.next(false);
@@ -58,7 +49,7 @@ export class DeleteModalComponent implements OnInit {
     }
   }
 
-  get image() {
-    return this.state.getOwnImageID();
+  get imageId() {
+    return this.image || this.state.getOwnImageID();
   }
 }

@@ -68,7 +68,9 @@
             display: flex;
             flex-flow: row;
             align-items: center;
-            justify-content: center;
+            justify-content: stretch;
+            width: 100%;
+            gap: 16px;
 
             .cancel_button {
                 .font-source-sans;
@@ -84,12 +86,19 @@
                 color: @color-dark-brown;
 
                 opacity: 0.5;
-                margin-right: 24px;
+                margin-right: 0;
+                white-space: nowrap;
                 cursor: pointer;
+
+                &.preserve-case {
+                    text-transform: none;
+                    letter-spacing: normal;
+                }
             }
 
             .submit_button {
-                min-width: 160px;
+                min-width: 0;
+                flex: 1 1 auto;
                 border: 1px solid @color-offtint;
                 border-radius: 22px;
                 height: 36px;

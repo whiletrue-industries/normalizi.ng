@@ -30,4 +30,4 @@
 <app-consent-modal [open]='consentModalOpen' (closed)='consentModalOpen = false'></app-consent-modal>
 <app-email-modal [open]='emailModalOpen' (closed)='handleEmailModalClosed($event)'></app-email-modal>
 <app-redirect-modal [open]='redirectModalOpen' (closed)='redirectModalOpen = false'></app-redirect-modal>
-<app-delete-modal [open]='deleteModalOpen' (closed)='deleteModalOpen = false'></app-delete-modal>
+<app-delete-modal [open]='deleteModalOpen' [image]='focusedItem?.item?.image' (closed)='handleDeleteModalClosed($event)'></app-delete-modal>

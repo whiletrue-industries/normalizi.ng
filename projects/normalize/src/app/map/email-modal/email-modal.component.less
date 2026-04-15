@@ -37,6 +37,7 @@
     padding: 12px 16px;
     border: 1px solid @color-dark-brown;
     border-radius: 22px;
+    box-sizing: border-box;
     background-color: @color-offwhite;
     color: @color-dark-brown;
     cursor: pointer;
@@ -61,27 +62,39 @@
     &--remove {
       border-color: @color-offtint;
       color: @color-dark-brown;
-      opacity: 0.5;
+      opacity: 0.7;
     }
 
     &--countdown {
-      opacity: 0.7;
-      cursor: default;
-      pointer-events: none;
+      border-color: transparent;
+      border-width: 1px;
+      color: @color-dark-brown;
+      opacity: 1;
+      cursor: pointer;
+      box-shadow: inset 0 0 0 1px @color-offtint;
+      animation: remove-countdown-flash 1s steps(2, end) infinite;
     }
   }
 }
 
-.inline-link-btn {
+.back-arrow-btn {
   .font-source-sans;
   border: 0;
   background: transparent;
   padding: 0;
-  margin-top: 16px;
+  margin: 0 0 8px;
   color: @color-dark-brown;
-  opacity: 0.6;
-  text-decoration: underline;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 28px;
+  line-height: 1;
   cursor: pointer;
+}
+
+@keyframes remove-countdown-flash {
+  0%, 49% {
+    box-shadow: inset 0 0 0 1px @color-offtint;
+  }
+
+  50%, 100% {
+    box-shadow: inset 0 0 0 4px #424242;
+  }
 }

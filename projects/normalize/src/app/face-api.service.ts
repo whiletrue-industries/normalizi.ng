@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import * as faceapi from 'face-api.js';
 import { defer, ReplaySubject } from 'rxjs';
 import { ConfigService } from './config.service';
+import { debugLog } from './logger';
 
 @Injectable({
   providedIn: 'root'
@@ -12,7 +13,7 @@ export class FaceApiService {
 
   constructor(private config: ConfigService) {
     defer(async () => { await this.loadModels(); }).subscribe(() => {
-      console.log('FACEAPI LOADED', faceapi.nets.tinyFaceDetector.params && faceapi.nets.faceLandmark68TinyNet, faceapi.nets);
+      debugLog('FACEAPI LOADED', faceapi.nets.tinyFaceDetector.params && faceapi.nets.faceLandmark68TinyNet, faceapi.nets);
       this.ready.next();
     });
   }

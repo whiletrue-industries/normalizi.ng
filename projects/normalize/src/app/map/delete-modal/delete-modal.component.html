@@ -1,12 +1,9 @@
 <app-modal [submit_text]='submit_text' [cancel_text]='cancel_text' [open]='open' [submit_allowed]='true' (closed)='close($event)'>
   @if (phase === 0) {
-    <img [src]='imageFetcher.fetchFaceImage(image)'/>
+    @if (imageId) {
+      <img [src]='imageFetcher.fetchFaceImage(imageId)'/>
+    }
     <span class='header'>Are you sure you want to delete all of your data?</span>
     <span>We can’t undo this...</span>
-  }
-  @if (phase === 1) {
-    <img src='assets/img/empty.svg'/>
-    <span class='header'>Goodbye...</span>
-    <span>We will remove your data from the map within the next 24 hours.</span>
   }
 </app-modal>
