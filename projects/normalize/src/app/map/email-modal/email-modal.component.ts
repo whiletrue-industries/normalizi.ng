@@ -3,6 +3,7 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { debounceTime, first } from 'rxjs/operators';
 import { ApiService } from '../../api.service';
+import { ImageFetcherService } from '../../image-fetcher.service';
 import { StateService } from '../../state.service';
 
 @Component({
@@ -26,12 +27,12 @@ export class EmailModalComponent implements OnInit, OnDestroy {
 
   private autoDeleteTimerHandle: ReturnType<typeof setTimeout> | null = null;
   private countdownIntervalHandle: ReturnType<typeof setInterval> | null = null;
-  private readonly AUTO_DELETE_DELAY_MS = 15000;
-  private readonly COUNTDOWN_SECONDS = 5;
+  private readonly AUTO_DELETE_DELAY_MS = 25000;
+  private readonly COUNTDOWN_SECONDS = 10;
 
   triggerEmailTimeout = new BehaviorSubject<boolean>(null);
 
-  constructor(private api: ApiService, private state: StateService) { }
+  constructor(private api: ApiService, private state: StateService, public imageFetcher: ImageFetcherService) { }
 
   ngOnInit(): void {
     this.startAutoDeleteTimer();
@@ -84,6 +85,11 @@ export class EmailModalComponent implements OnInit, OnDestroy {
     this.phase = 1;
   }
 
+  backToConfirmation(): void {
+    this.phase = 0;
+    this.startAutoDeleteTimer();
+  }
+
   retake(): void {
     this.clearTimers();
     this.state.pushRequest(this.api.deleteOwnItem());
@@ -97,8 +103,7 @@ export class EmailModalComponent implements OnInit, OnDestroy {
   }
 
   cancelDelete(): void {
-    this.phase = 0;
-    this.startAutoDeleteTimer();
+    this.backToConfirmation();
   }
 
   confirmDelete(): void {
@@ -138,6 +143,14 @@ export class EmailModalComponent implements OnInit, OnDestroy {
 
   get emailAddress() {
     return this._emailAddress;
+  }
+
+  get ownFaceImage() {
+    return this.imageFetcher.fetchFaceImage(this.state.getOwnImageID());
+  }
+
+  get ownImageId() {
+    return this.state.getOwnImageID();
   }
 }
 

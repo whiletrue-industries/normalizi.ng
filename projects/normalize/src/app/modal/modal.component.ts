@@ -15,6 +15,7 @@ export class ModalComponent implements OnInit {
   @Input() submit_allowed = true;
   @Input() hide_close = false;
   @Input() hide_actions = false;
+  @Input() wide = false;
   @Output() closed = new EventEmitter<boolean>();
 
   constructor() { }

@@ -26,7 +26,7 @@ export class DeleteModalComponent implements OnInit {
   }
 
   start() {
-    this.submit_text = 'delete all my data';
+    this.submit_text = 'delete my data';
     this.cancel_text = 'cancel';
     this.phase = 0;
   }

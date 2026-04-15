@@ -88,6 +88,7 @@ export class MapComponent implements OnInit, AfterViewInit {
       this.hasSelfie = this.state.imageID || this.state.descriptor;
     }, 0);
     let start = this.state.gallery ? from([false]) : from([true]);
+    let suppressOwnImageOnLoad = false;
     this.state.needsEmail.subscribe(() => {
       debugLog('NEEDS EMAIL');
       this.definition = true;
@@ -96,6 +97,9 @@ export class MapComponent implements OnInit, AfterViewInit {
         if (!this.state.gallery) {
           start = this.emailModal.closed.pipe(
             filter((action: string) => action === 'added' || action === 'deleted'),
+            tap((action: string) => {
+              suppressOwnImageOnLoad = action === 'deleted';
+            }),
             map(() => true)
           );
         }
@@ -157,8 +161,8 @@ export class MapComponent implements OnInit, AfterViewInit {
         this.tsneOverlay = new TSNEOverlay(this.map, this.grid, this.configuration.dim, this.fetchImage);
         const items: Observable<ImageItem>[] = [];
 
-        let expectedId = this.state.getOwnItemID();
-        if (this.state.getOwnImageID()) {
+        let expectedId = suppressOwnImageOnLoad ? null : this.state.getOwnItemID();
+        if (!suppressOwnImageOnLoad && this.state.getOwnImageID()) {
           if (this.state.getDescriptor()) {
             const gl = this.state.getGeolocation();
             const item: ImageItem = {
@@ -341,6 +345,16 @@ export class MapComponent implements OnInit, AfterViewInit {
   }
 
   private coverDeletedFace(): void {
+    if (this.map) {
+      this.overlay = false;
+      this.focusedItem = null;
+      if (this.breatheOverlay) {
+        this.breatheOverlay.remove();
+        this.breatheOverlay = null;
+      }
+      this.drawerOpen = false;
+    }
+
     if (this.ownGI && this.map) {
       if (this.tsneOverlay) {
         this.tsneOverlay.removeImageLayer(this.ownGI.item);
@@ -353,12 +367,17 @@ export class MapComponent implements OnInit, AfterViewInit {
       const idx = this.configuration.grid.indexOf(this.ownGI);
       if (idx !== -1) {
         this.configuration.grid.splice(idx, 1);
+        this.grid.next(this.configuration.grid);
       }
       if (this.focusedItem === this.ownGI) {
         this.focusedItem = null;
         this.drawerOpen = false;
       }
       this.ownGI = null;
+    }
+
+    if (this.map) {
+      this.flyToSmooth(this.map.getCenter(), this.maxZoom - 5, this.zoomOutDurationSec).subscribe();
     }
   }
 

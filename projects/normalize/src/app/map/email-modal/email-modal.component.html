@@ -1,8 +1,13 @@
 @if (phase === 0) {
-  <app-modal [open]='open' [hide_close]='true' [hide_actions]='true'>
+  <app-modal [open]='open' [hide_close]='true' [hide_actions]='true' [wide]='true'>
     <span class='header'>Got it. Thank you!</span>
+    @if (ownImageId) {
+      <div class='confirmation-photo'>
+        <app-moving-image [src]='ownFaceImage' [index]='4' [id]='ownImageId'></app-moving-image>
+      </div>
+    }
     <div class='confirmation-buttons'>
-      <button class='action-btn action-btn--add' type='button' (click)='addToMap()'>Add to the Normalizi.ng map</button>
+      <button class='action-btn action-btn--add action-btn--primary' type='button' (click)='addToMap()'>Add to the Normalizi.ng map</button>
       <button class='action-btn action-btn--retake' type='button' (click)='retake()'>Retake my picture</button>
       @if (countdownSeconds === null) {
         <button class='action-btn action-btn--remove' type='button' (click)='showDeleteConfirmation()'>Remove my face and my data</button>
@@ -16,7 +21,7 @@
 }
 
 @if (phase === 1) {
-  <app-modal submit_text='send' cancel_text='no, thanks' [open]='open' [submit_allowed]='hasEmail' (closed)='$event ? submitEmail() : noThanks()'>
+  <app-modal submit_text='send' cancel_text='back' [open]='open' [submit_allowed]='hasEmail' (closed)='$event ? submitEmail() : backToConfirmation()'>
     <span class='header'>Your face and data are being added to the map</span>
     <span>Do you want us to email you a private delete link in case you change your mind?</span>
     <input #input type='email' placeholder='your email' [(ngModel)]='emailAddress'>
@@ -24,11 +29,12 @@
       <span class='error'>oops... this doesn't look like an email address</span>
     }
     <span class='smallprint'>*We won't save your email and only use it once</span>
+    <button class='inline-link-btn' type='button' (click)='noThanks()'>No, thanks</button>
   </app-modal>
 }
 
 @if (phase === 2) {
-  <app-modal submit_text='delete all my data' cancel_text='cancel' [open]='open' [submit_allowed]='true' (closed)='$event ? confirmDelete() : cancelDelete()'>
+  <app-modal submit_text='delete all my data' cancel_text='back' [open]='open' [submit_allowed]='true' (closed)='$event ? confirmDelete() : cancelDelete()'>
     <span class='header'>Are you sure you want to delete all of your data?</span>
     <span>We can't undo this...</span>
   </app-modal>

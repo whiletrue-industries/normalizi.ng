@@ -19,6 +19,14 @@
     justify-content: center;
     padding: 32px;
 
+    &.wide {
+        padding: 16px;
+
+        > .modal-body {
+            max-width: 360px;
+        }
+    }
+
     > .background {
         position: absolute;
         top: 0;
@@ -70,7 +78,8 @@
                 line-height: 18px;
 
                 text-decoration-line: underline;
-                font-variant: small-caps;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
 
                 color: @color-dark-brown;
 
@@ -94,7 +103,8 @@
                 font-weight: normal;
                 font-size: 16px;
                 line-height: 115%;
-                font-variant: small-caps;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
 
                 background-color: @color-offwhite;
 
