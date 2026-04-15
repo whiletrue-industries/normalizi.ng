@@ -17,6 +17,7 @@ export class DeleteModalComponent implements OnInit {
   @Output() closed = new EventEmitter<boolean>();
 
   phase = 0;
+  deleting = false;
   submit_text: string;
   cancel_text: string;
 
@@ -30,11 +31,13 @@ export class DeleteModalComponent implements OnInit {
     this.submit_text = 'delete my data';
     this.cancel_text = 'cancel';
     this.phase = 0;
+    this.deleting = false;
   }
 
   close(value) {
     if (value) {
       if (this.phase === 0) {
+        this.deleting = true;
         this.state.setLastDeletedOwnItemID(this.state.getOwnItemID());
         this.api.deleteOwnItem().pipe(first()).subscribe(() => {
           this.state.fullClear();

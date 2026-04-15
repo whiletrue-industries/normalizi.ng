@@ -1,9 +1,16 @@
-<app-modal [submit_text]='submit_text' [cancel_text]='cancel_text' [open]='open' [submit_allowed]='true' (closed)='close($event)'>
+<app-modal [submit_text]='submit_text' [cancel_text]='cancel_text' [open]='open' [submit_allowed]='true' [hide_actions]='deleting' (closed)='close($event)'>
   @if (phase === 0) {
     @if (imageId) {
       <img [src]='imageFetcher.fetchFaceImage(imageId)'/>
     }
-    <span class='header'>Are you sure you want to delete all of your data?</span>
-    <span>We can’t undo this...</span>
+    @if (deleting) {
+      <div class='deleting-state'>
+        <div class='deleting-spinner'></div>
+        <span>deleting</span>
+      </div>
+    } @else {
+      <span class='header'>Are you sure you want to delete all of your data?</span>
+      <span>We can't undo this...</span>
+    }
   }
 </app-modal>
