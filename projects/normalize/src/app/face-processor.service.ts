@@ -85,7 +85,7 @@ export class FaceProcessorService {
     const canvas = document.createElement('canvas');
     const elementHeight = el.offsetHeight;
     this.allowed = false;
-    const processingEdge = this.config.TINY ? 960 : 960;
+    const processingEdge = 960;
     let sourceWidth = 0;
     let sourceHeight = 0;
     if (el instanceof HTMLVideoElement) {
@@ -164,6 +164,10 @@ export class FaceProcessorService {
             detected: false
           });
           frames = 0;
+          smoothCenterX = null;
+          smoothCenterY = null;
+          smoothRotation = null;
+          smoothScale = null;
         }
         return !!result || animationObs.cancelled;
       }),

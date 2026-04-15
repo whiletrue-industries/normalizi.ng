@@ -19,10 +19,6 @@ const PROMPTS = {
   hold_still2: ["That's it", 'now hold still'],
 }
 
-type MediaTrackConstraintsWithResizeMode = MediaTrackConstraints & {
-  resizeMode?: 'none';
-};
-
 @Component({
     selector: 'app-selfie',
     templateUrl: './selfie.component.html',
