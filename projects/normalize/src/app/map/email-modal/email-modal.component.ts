@@ -190,12 +190,8 @@ export class EmailModalComponent implements OnInit, OnDestroy, OnChanges {
     return this.imageFetcher.fetchImage(this.confirmationImageId);
   }
 
-  get ownImageId() {
-    return this.state.getOwnImageID();
-  }
-
   get confirmationImageId() {
-    return this.ownImageId || this.fallbackImageID;
+    return this.state.getOwnImageID() || this.fallbackImageID;
   }
 
   get confirmationImageAnimationId() {
