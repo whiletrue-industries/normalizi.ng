@@ -78,7 +78,17 @@ export class StateService {
   }
 
   getPrivateUrl() {
+    if (!this.hasValidPrivateLinkData()) {
+      return null;
+    }
     return `https://normalizi.ng/?i=${this.itemID}&u=${this.imageID}&m=${this.magic}`;
+  }
+
+  hasValidPrivateLinkData() {
+    const validItemID = Number.isFinite(this.itemID) && this.itemID > 0;
+    const validImageID = !!this.imageID && this.imageID !== 'null' && this.imageID !== 'undefined';
+    const validMagic = !!this.magic && this.magic !== 'null' && this.magic !== 'undefined';
+    return validItemID && validImageID && validMagic;
   }
 
   setOwnInfo(value) {

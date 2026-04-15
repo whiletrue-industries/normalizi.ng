@@ -21,6 +21,9 @@ import { debugLog } from '../logger';
     selector: 'app-map',
     templateUrl: './map.component.html',
     styleUrls: ['./map.component.less'],
+    host: {
+      '[class.confirmation-open]': 'confirmationModalOpen'
+    },
     standalone: false
 })
 export class MapComponent implements OnInit, AfterViewInit {
@@ -97,23 +100,25 @@ export class MapComponent implements OnInit, AfterViewInit {
     let start = this.state.gallery ? from([false]) : from([true]);
     let suppressOwnImageOnLoad = false;
     let holdZoomForEmailFlow = false;
-    let pendingEmailModalOpen = false;
     this.definitionClosed.subscribe(() => {
       this.definition = false;
-      if (pendingEmailModalOpen) {
-        this.emailModalOpen = true;
-        pendingEmailModalOpen = false;
-      }
     });
     this.state.needsEmail.subscribe(() => {
       debugLog('NEEDS EMAIL');
-      this.definition = true;
-      if (this.state.getOwnItemID() && !this.state.getAskedForEmail()) {
+      if (this.state.hasValidPrivateLinkData() && !this.state.getAskedForEmail()) {
         holdZoomForEmailFlow = true;
-        pendingEmailModalOpen = true;
-        this.emailModalOpen = false;
+        this.definition = false;
+        this.emailModalOpen = true;
         if (!this.state.gallery) {
           start = this.emailModal.closed.pipe(
+            tap((action: string) => {
+              if (action === 'deleted') {
+                this.definitionClosed.next();
+              }
+              if (action === 'added') {
+                this.definition = true;
+              }
+            }),
             filter((action: string) => action === 'added' || action === 'deleted'),
             tap((action: string) => {
               suppressOwnImageOnLoad = action === 'deleted';
@@ -538,6 +543,10 @@ export class MapComponent implements OnInit, AfterViewInit {
 
   get drawerOpen() {
     return this._drawerOpen;
+  }
+
+  get confirmationModalOpen(): boolean {
+    return this.emailModalOpen || this.deleteModalOpen;
   }
 
   private flyToSmooth(center: L.LatLngExpression, zoom: number, durationSec: number): Observable<void> {
