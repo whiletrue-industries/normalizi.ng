@@ -15,20 +15,68 @@
 <div class='video'>
   <video #inputVideo [autoplay]='true' [muted]='true' [volume]='0' playsinline
     [style.transform]='transform' [style.transform-origin]='transformOrigin'
-    [class.no-detection]='!detected'
+    [class.no-detection]='!detected()'
   ></video>
-  @if (maskTransform) {
-    <div class='face-mask-wrapper'>
-      @if (!detected) {
-        <img src='assets/img/face-mask.svg' [style.transform]='maskTransform'>
-      }
-    </div>
-  }
   @if (videoHeight) {
     <div class='face-mask-overlay'>
-      <img [class.visible]='!detected' src='assets/img/frame-overlay.svg' [style.transform]='maskOverlayTransform'>
-      <img [class.visible]='detected' src='assets/img/frame-overlay2.svg' [style.transform]='maskOverlayTransform'>
-      <img [class.visible]='detected && allowed' src='assets/img/frame-overlay3.svg' [style.transform]='maskOverlayTransform' [class.flicker]='allowed'>
+      <img [class.visible]='!showDynamicRings && !showConfirmedOverlay' src='assets/img/frame-overlay.svg' [style.transform]='maskOverlayTransform'>
+      @if (showDynamicRings) {
+        <svg class='dynamic-rings' width='1000' height='516' viewBox='0 0 1000 516' fill='none' xmlns='http://www.w3.org/2000/svg' aria-hidden='true' focusable='false' [style.transform]='maskOverlayTransform'>
+          <path fill-rule='evenodd' clip-rule='evenodd' d='M1000 0H0V516H1000V0ZM500 179C455.817 179 420 214.817 420 259C420 303.183 455.817 339 500 339C544.183 339 580 303.183 580 259C580 214.817 544.183 179 500 179Z' [attr.fill]='dynamicRingsConfirmed ? "#038100" : "#AD0000"' fill-opacity='0.33'></path>
+          <defs>
+            <filter id='ring-glow-red' x='-50%' y='-50%' width='200%' height='200%' color-interpolation-filters='sRGB'>
+              <feFlood flood-opacity='0' result='BackgroundImageFix'/>
+              <feColorMatrix in='SourceAlpha' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0' result='hardAlpha'/>
+              <feOffset/>
+              <feGaussianBlur stdDeviation='8'/>
+              <feColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/>
+              <feBlend mode='normal' in2='BackgroundImageFix' result='effect1_dropShadow'/>
+              <feBlend mode='normal' in='SourceGraphic' in2='effect1_dropShadow' result='shape'/>
+            </filter>
+            <filter id='ring-glow-green' x='-50%' y='-50%' width='200%' height='200%' color-interpolation-filters='sRGB'>
+              <feFlood flood-opacity='0' result='BackgroundImageFix'/>
+              <feColorMatrix in='SourceAlpha' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0' result='hardAlpha'/>
+              <feOffset/>
+              <feGaussianBlur stdDeviation='8'/>
+              <feColorMatrix type='matrix' values='0 0 0 0 0.02 0 0 0 0 1 0 0 0 0 0 0 0 0 1 0'/>
+              <feBlend mode='normal' in2='BackgroundImageFix' result='effect1_dropShadow'/>
+              <feBlend mode='normal' in='SourceGraphic' in2='effect1_dropShadow' result='shape'/>
+            </filter>
+          </defs>
+          <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr' aria-hidden="true" focusable="false">
+            <circle class='ring-layer ring-outermost' cx='500' cy='258' r='199.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[0]'></circle>
+          </g>
+          <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr' aria-hidden="true" focusable="false">
+            <circle class='ring-layer' cx='500' cy='258' r='179.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[1]'></circle>
+          </g>
+          <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr' aria-hidden="true" focusable="false">
+            <circle class='ring-layer' cx='500' cy='258' r='159.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[2]'></circle>
+          </g>
+          <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr' aria-hidden="true" focusable="false">
+            <circle class='ring-layer' cx='500' cy='258' r='139.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[3]'></circle>
+          </g>
+          <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr' aria-hidden="true" focusable="false">
+            <circle class='ring-layer' cx='500' cy='258' r='119.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[4]'></circle>
+          </g>
+          <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr' aria-hidden="true" focusable="false">
+            <circle class='ring-layer' cx='500' cy='258' r='99.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[5]'></circle>
+          </g>
+          <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr' aria-hidden="true" focusable="false">
+            <circle class='ring-layer' cx='500' cy='258' r='79.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[6]'></circle>
+          </g>
+          <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr' aria-hidden="true" focusable="false">
+            <circle class='ring-layer ring-smallest' cx='500' cy='258' r='77' stroke='white' stroke-width='6' [style.transform]='centerRingTransformValue'></circle>
+          </g>
+          <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr' aria-hidden="true" focusable="false">
+            <path d='M472.941 266.993C477.36 266.994 480.942 263.413 480.943 258.995C480.943 254.577 477.362 250.994 472.944 250.993C468.526 250.993 464.943 254.574 464.943 258.992C464.942 263.41 468.523 266.993 472.941 266.993Z' stroke='white' stroke-width='2'></path>
+          </g>
+          <g style='mix-blend-mode:lighten' [attr.filter]='ringFilterAttr' aria-hidden="true" focusable="false">
+            <path d='M526.929 267.006C531.347 267.007 534.929 263.426 534.93 259.007C534.931 254.589 531.349 251.007 526.931 251.006C522.513 251.005 518.931 254.587 518.93 259.005C518.929 263.423 522.51 267.005 526.929 267.006Z' stroke='white' stroke-width='2'></path>
+          </g>
+        </svg>
+      }
+      <img [class.visible]='showConfirmedOverlay' src='assets/img/frame-overlay2.svg' [style.transform]='maskOverlayTransform'>
+      <img [class.visible]='showConfirmedOverlay && allowed' src='assets/img/frame-overlay3.svg' [style.transform]='maskOverlayTransform' [class.flicker]='allowed'>
       <svg width="194" height="254" fill="none" xmlns="http://www.w3.org/2000/svg" [style.transform]='maskOverlayTransform' [style.display]='svgHack ? "none" : "inherit"'>
         <g filter="url(#filter0_d)">
           <text style="mix-blend-mode:lighten" fill='white' transform='scale(-1, 1)translate(-97,60)'>{{countdownText}}</text>
@@ -48,7 +96,7 @@
     </div>
   }
 </div>
-@if (detected) {
+@if (detected()) {
   <button class='shutter' type='button' aria-label='Capture' (touchstart)='setAllowed($event, true)' (click)='setAllowed($event, true)'>
     <svg viewBox='0 0 72 72' aria-hidden='true' focusable='false'>
       <circle cx='36' cy='36' r='26' fill='white'></circle>

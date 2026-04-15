@@ -85,14 +85,21 @@ export class FaceProcessorService {
     const canvas = document.createElement('canvas');
     const elementHeight = el.offsetHeight;
     this.allowed = false;
+    const processingEdge = 960;
+    let sourceWidth = 0;
+    let sourceHeight = 0;
     if (el instanceof HTMLVideoElement) {
-      canvas.width = el.videoWidth;
-      canvas.height = el.videoHeight;  
+      sourceWidth = el.videoWidth;
+      sourceHeight = el.videoHeight;
     }
     if (el instanceof HTMLImageElement) {
-      canvas.width = el.width;
-      canvas.height = el.height;  
+      sourceWidth = el.width;
+      sourceHeight = el.height;
     }
+    const sourceMaxEdge = Math.max(sourceWidth, sourceHeight, 1);
+    const processingScale = Math.min(1, processingEdge / sourceMaxEdge);
+    canvas.width = Math.max(1, Math.round(sourceWidth * processingScale));
+    canvas.height = Math.max(1, Math.round(sourceHeight * processingScale));
     // console.log('CANVAS', canvas);
     const ratio = Math.min(el.offsetWidth / canvas.width, el.offsetHeight / canvas.height);
     // console.log('RATIO', ratio);
@@ -105,6 +112,10 @@ export class FaceProcessorService {
     let firstLandmarks: any[] = [];
     let snapped = false;
     let gender_age: any = {};
+    let smoothCenterX: number | null = null;
+    let smoothCenterY: number | null = null;
+    let smoothRotation: number | null = null;
+    let smoothScale: number | null = null;
 
     const id = 'fps' + Math.random();
     const animationObs = new AnimationObservable(id, this.animationManager);
@@ -153,6 +164,10 @@ export class FaceProcessorService {
             detected: false
           });
           frames = 0;
+          smoothCenterX = null;
+          smoothCenterY = null;
+          smoothRotation = null;
+          smoothScale = null;
         }
         return !!result || animationObs.cancelled;
       }),
@@ -167,15 +182,43 @@ export class FaceProcessorService {
         const bottomPoint = landmarks.positions[8];
         const center = landmarks.positions[30];
         const sub = topPoint.sub(bottomPoint);
-        const rotation = Math.atan(sub.x / (sub.y ? sub.y : 0.00001));
+        const rawRotation = Math.atan(sub.x / (sub.y ? sub.y : 0.00001));
+        const rawScale = 0.3 * canvas.height / sub.magnitude();
+        const detectionScore = result.detection && Number.isFinite(result.detection.score)
+          ? result.detection.score
+          : 0;
+
+        if (smoothCenterX === null || smoothCenterY === null || smoothRotation === null || smoothScale === null) {
+          smoothCenterX = center.x;
+          smoothCenterY = center.y;
+          smoothRotation = rawRotation;
+          smoothScale = rawScale;
+        } else {
+          const jumpPx = Math.hypot(center.x - smoothCenterX, center.y - smoothCenterY);
+          const jumpRatio = jumpPx / Math.max(canvas.height, 1);
+          const outlierDamping = jumpRatio > 0.22 && detectionScore < 0.45;
+          const alpha = outlierDamping ? 0.06 : Math.min(0.5, 0.18 + detectionScore * 0.35);
+
+          smoothCenterX += (center.x - smoothCenterX) * alpha;
+          smoothCenterY += (center.y - smoothCenterY) * alpha;
+          smoothRotation += (rawRotation - smoothRotation) * alpha;
+          smoothScale += (rawScale - smoothScale) * alpha;
+        }
+
+        const trackedCenter = { x: smoothCenterX, y: smoothCenterY };
+        const rotation = smoothRotation;
+        const scale = smoothScale;
         const orientation = rotation / Math.PI * 180;
-        const scale = 0.3 * canvas.height / sub.magnitude();
         const magnification = 0.657 / scale * elementHeight / 291; // 291 = face-mask height
         // const templateMagnification = 
         // if (scale < 1) {
         //   scale = 1;
         // }
-        const distance = Math.sqrt((center.x - canvas.width*0.5)**2 + (center.y - canvas.height*0.6)**2);
+        const distance = Math.sqrt((trackedCenter.x - canvas.width*0.5)**2 + (trackedCenter.y - canvas.height*0.6)**2);
+        // The selfie viewport is mirrored at the container level, so keep
+        // tracking offsets in source coordinates to avoid double inversion.
+        const faceOffsetX = (trackedCenter.x - canvas.width / 2) * ratio;
+        const faceOffsetY = (trackedCenter.y - canvas.height / 2) * ratio;
   
         const snapRatio = snapped ? 2 : 1;
         let problem = null;
@@ -203,20 +246,26 @@ export class FaceProcessorService {
           context.translate(canvas.width/2, canvas.height/2);
           context.rotate(rotation);
           context.scale(scale, scale);
-          context.translate(-center.x, -center.y);
+          context.translate(-trackedCenter.x, -trackedCenter.y);
           context.drawImage(el, 0, 0, canvas.width, canvas.height);
           context.restore();
   
           progress.next({
             // transformOrigin: `${center.x * ratio}px ${center.y * ratio}px`,
-            transformOrigin: `${el.offsetWidth*0.5 + (center.x - canvas.width/2)* ratio}px ${el.offsetHeight*0.5 + (center.y-canvas.height/2) * ratio}px`,
-            transform: `translate(${-(center.x - canvas.width/2)* ratio}px,${-(center.y-canvas.height/2) * ratio}px)rotate(${rotation}rad)scale(${scale*this.defaultScale})`,
+            transformOrigin: `${el.offsetWidth*0.5 + (trackedCenter.x - canvas.width/2)* ratio}px ${el.offsetHeight*0.5 + (trackedCenter.y-canvas.height/2) * ratio}px`,
+            transform: `translate(${-(trackedCenter.x - canvas.width/2)* ratio}px,${-(trackedCenter.y-canvas.height/2) * ratio}px)rotate(${rotation}rad)scale(${scale*this.defaultScale})`,
             // preview: canvas.toDataURL(),
             maskTransform: `translate(${canvas.width/2 * ratio}px,${canvas.height/2 * ratio}px)rotate(0rad)scale(${magnification*this.defaultScale})`,
             kind: 'transform',
             snapped: true,
+            faceOffsetX,
+            faceOffsetY,
             orientation, scale, distance: distance / canvas.height,
           });
+          // Avoid the expensive descriptor/age second pass while still guiding alignment.
+          if (!this.allowed) {
+            return from([result]);
+          }
           const ret = detectSingleFace(canvas, this.detectorOptions).withFaceLandmarks(this.config.TINY).withFaceDescriptor();
           if (gender_age.gender) {
             return ret.run();
@@ -231,6 +280,8 @@ export class FaceProcessorService {
             maskTransform: `translate(${topPoint.x * ratio}px,${topPoint.y * ratio}px)rotate(${-rotation}rad)scale(${magnification*this.defaultScale})`,
             kind: 'transform',
             snapped: false,
+            faceOffsetX,
+            faceOffsetY,
             orientation, scale, distance: distance / canvas.height,
             problem: problem
           });
