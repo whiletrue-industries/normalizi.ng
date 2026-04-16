@@ -18,7 +18,7 @@ export class ConfigService {
   TINY = false;
   FEATURE_ORDER = ['nose', 'eyes', 'mouth', 'forehead', 'face'];
   IMAGE_SIZE_BY_INDEX = [];
-
+  
   constructor() {
     for (const feature of this.FEATURE_ORDER) {
       const ratio = this.FEATURES[feature].ratio;
