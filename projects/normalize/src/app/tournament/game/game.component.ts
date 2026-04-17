@@ -34,11 +34,6 @@ export class GameComponent implements OnInit, OnDestroy {
   private gameSubscription: Subscription;
 
   constructor(private api: ApiService, private state: StateService, public imageFetcher: ImageFetcherService, private router: Router) {
-    this.gameSubscription = api.getGame().subscribe((game) => {
-      this.game = game;
-      console.log('GOT GAME', game);
-      this.next();
-    });
   }
 
   ngOnInit(): void {
@@ -47,6 +42,11 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
     this.definition = true;
+    this.gameSubscription = this.api.getGame().subscribe((game) => {
+      this.game = game;
+      console.log('GOT GAME', game);
+      this.next();
+    });
   }
 
   ngOnDestroy(): void {

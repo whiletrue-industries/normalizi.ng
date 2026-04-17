@@ -174,6 +174,13 @@ export class EmailModalComponent implements OnInit, OnDestroy, OnChanges {
     return !!this.emailAddress && valid;
   }
 
+  onEmailEnterKey(event: KeyboardEvent): void {
+    event.preventDefault();
+    if (this.hasEmail) {
+      this.submitEmail();
+    }
+  }
+
   set emailAddress(value: string) {
     this._emailAddress = value;
     this.triggerEmailTimeout.next(true);
