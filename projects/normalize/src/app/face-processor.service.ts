@@ -186,6 +186,10 @@ export class FaceProcessorService {
         const topPoint = landmarks.positions[27];
         const bottomPoint = landmarks.positions[8];
         const center = landmarks.positions[30];
+        const leftEye = landmarks.getLeftEye();
+        const rightEye = landmarks.getRightEye();
+        const faceBoxCenterX = result.detection.box.x + result.detection.box.width / 2;
+        const eyeLineY = [...leftEye, ...rightEye].reduce((sum, point) => sum + point.y, 0) / Math.max(leftEye.length + rightEye.length, 1);
         const sub = topPoint.sub(bottomPoint);
         const rawRotation = Math.atan(sub.x / (sub.y ? sub.y : 0.00001));
         const rawScale = 0.3 * canvas.height / sub.magnitude();
@@ -214,7 +218,9 @@ export class FaceProcessorService {
         const rotation = smoothRotation;
         const scale = smoothScale;
         const orientation = rotation / Math.PI * 180;
-        const magnification = 0.657 / scale * elementHeight / 291; // 291 = face-mask height
+        const lowPowerMaskScaleMultiplier = options.lowPower ? 1.25 : 1;
+        const magnification = 0.657 / scale * elementHeight / 291 * lowPowerMaskScaleMultiplier; // 291 = face-mask height
+        const lowPowerMaskOffsetY = options.lowPower ? 0.05 * 291 * magnification * this.defaultScale : 0;
         // const templateMagnification = 
         // if (scale < 1) {
         //   scale = 1;
@@ -275,11 +281,13 @@ export class FaceProcessorService {
             return ret.withAgeAndGender().run();
           }
         } else {
+          const maskAnchorX = options.lowPower ? faceBoxCenterX : topPoint.x;
+          const maskAnchorY = options.lowPower ? eyeLineY : topPoint.y;
           progress.next({
             transformOrigin: `${el.offsetWidth*0.5}px ${el.offsetHeight*0.5}px`,
             transform: `translate(0px,0px)rotate(0rad)scale(${this.defaultScale})`,
             // maskTransform: `translate(0px,0px)rotate(0rad)scale(1)`,
-            maskTransform: `translate(${topPoint.x * ratio}px,${topPoint.y * ratio}px)rotate(${-rotation}rad)scale(${magnification*this.defaultScale})`,
+            maskTransform: `translate(${maskAnchorX * ratio}px,${maskAnchorY * ratio + lowPowerMaskOffsetY}px)rotate(${-rotation}rad)scale(${magnification*this.defaultScale})`,
             kind: 'transform',
             snapped: false,
             faceOffsetX,
