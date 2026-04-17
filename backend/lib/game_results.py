@@ -5,9 +5,9 @@ from flask import Request, Response
 from .db import engine
 from .net import HEADERS
 
-update_sql = text('UPDATE faces SET tournaments=tournaments+:t, votes=votes+:v WHERE id=:id AND allowed > 0')
+update_sql = text('UPDATE faces SET tournaments=tournaments+:t, votes=votes+:v WHERE id=:id AND allowed >= 0')
 per_feature_updates_sql = [
-    text(f'UPDATE faces SET tournaments_{i}=tournaments_{i}+:t, votes_{i}=votes_{i}+:v WHERE id=:id AND allowed > 0')
+    text(f'UPDATE faces SET tournaments_{i}=tournaments_{i}+:t, votes_{i}=votes_{i}+:v WHERE id=:id AND allowed >= 0')
     for i in range(5)
 ]
 
@@ -29,6 +29,7 @@ def game_results_handler(request: Request):
                 feature = update.pop('f')
                 connection.execute(update_sql, t=update['t'], v=update['v'], id=id)
                 connection.execute(per_feature_updates_sql[feature], t=update['t'], v=update['v'], id=id)
+            connection.commit()
         response = dict(
             success=True, updated=len(updates)
         )

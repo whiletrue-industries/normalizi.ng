@@ -263,7 +263,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
       tap(() => {
         this.flashActive = true;
       }),
-      delay(3000)
+      delay(1500)
     );
   }
 

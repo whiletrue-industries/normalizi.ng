@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
-import { from } from 'rxjs';
+import { from, Subscription } from 'rxjs';
 import { map, switchMap, tap } from 'rxjs/operators';
 import { ApiService } from '../../api.service';
 import { ImageFetcherService } from '../../image-fetcher.service';
@@ -12,7 +12,7 @@ import { StateService } from '../../state.service';
     styleUrls: ['./game.component.less'],
     standalone: false
 })
-export class GameComponent implements OnInit {
+export class GameComponent implements OnInit, OnDestroy {
 
   TUPLES_PER_FEATURE = 3;
   FEATURES = [
@@ -30,23 +30,39 @@ export class GameComponent implements OnInit {
   loaded = false;
   definition = true;
   idsCount = {};
+  private gameSaved = false;
+  private gameSubscription: Subscription;
 
   constructor(private api: ApiService, private state: StateService, public imageFetcher: ImageFetcherService, private router: Router) {
-    api.getGame().subscribe((game) => {
+    this.gameSubscription = api.getGame().subscribe((game) => {
       this.game = game;
       console.log('GOT GAME', game);
       this.next();
-    })
+    });
   }
 
   ngOnInit(): void {
+    if (this.state.getPlayed()) {
+      this.router.navigate(['/']);
+      return;
+    }
     this.definition = true;
+  }
+
+  ngOnDestroy(): void {
+    if (this.gameSubscription) {
+      this.gameSubscription.unsubscribe();
+    }
   }
 
   next() {
     if (this.index < this.maxIndex) {
       if (this.tuples.length === 0) {
         this.index += 1;
+        if (this.index === this.maxIndex) {
+          this.saveGameResults();
+          return;
+        }
         this.feature = this.FEATURES[this.index];
         const forbidden = Object.keys(this.idsCount).filter((id) => this.idsCount[id] > 2).map((id) => parseInt(id, 10));
         this.tuples = this.randomTuples(this.TUPLES_PER_FEATURE, forbidden);
@@ -63,10 +79,6 @@ export class GameComponent implements OnInit {
         }
       }
       this.candidates = this.tuples.shift();
-      // console.log('CANDIDATES', this.candidates);
-      if (this.index === this.maxIndex) {
-        this.saveGameResults();
-      }
     }
   }
 
@@ -124,7 +136,11 @@ export class GameComponent implements OnInit {
   }
 
   saveGameResults() {
+    if (this.gameSaved) {
+      return;
+    }
     if (this.results && this.results.length) {
+      this.gameSaved = true;
       this.state.pushRequest(
         from([this.results]).pipe(
           map((results) => {

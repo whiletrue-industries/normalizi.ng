@@ -25,7 +25,13 @@
     <button class='back-arrow-btn' type='button' aria-label='Back' (click)='backToConfirmation()'>&larr;</button>
     <span class='header'>Your face and data are being added to the map</span>
     <span>Do you want us to email you a private delete link in case you change your mind?</span>
-    <input #input type='email' placeholder='your email' [(ngModel)]='emailAddress'>
+    <div class='email-input-wrapper'>
+      <input #input type='email' placeholder='your email' [(ngModel)]='emailAddress'
+        (keydown.enter)='hasEmail && submitEmail()'>
+      @if (hasEmail) {
+        <button class='email-send-btn' type='button' aria-label='Send' (click)='submitEmail()'>&#8594;</button>
+      }
+    </div>
     @if (emailAddress && !hasEmail) {
       <span class='error'>oops... this doesn't look like an email address</span>
     }
