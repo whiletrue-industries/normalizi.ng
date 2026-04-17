@@ -50,7 +50,6 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   public isSlowDevice = false;
   public useDynamicRings = false;
   public lowPowerForced = false;
-  public showModeBadge = !environment.production;
   public showConfirmedOverlay = false;
   public dynamicRingsConfirmed = false;
   public faceOffsetX = 0;
@@ -431,12 +430,6 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
       return true;
     }
     return true;
-  }
-
-  get modeBadgeText(): string {
-    const mode = this.isSlowDevice ? 'low-power' : 'dynamic';
-    const source = this.lowPowerForced ? 'forced' : 'auto';
-    return `${mode} (${source})`;
   }
 
   private cancelRingTimers() {

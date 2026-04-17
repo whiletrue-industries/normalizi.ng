@@ -12,11 +12,6 @@
     </div>
   }
 </div>
-@if (showModeBadge) {
-  <div class='mode-badge'>
-    camera: {{modeBadgeText}} | set ?lowpower=1 or ?lowpower=0
-  </div>
-}
 <div class='video'>
   <video #inputVideo [autoplay]='true' [muted]='true' [volume]='0' playsinline
     [style.transform]='transform' [style.transform-origin]='transformOrigin'
