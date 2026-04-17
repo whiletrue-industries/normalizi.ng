@@ -31,7 +31,7 @@ export class GameComponent implements OnInit, OnDestroy {
   definition = true;
   idsCount = {};
   private gameSaved = false;
-  private gameSubscription: Subscription;
+  private gameSubscription: Subscription = Subscription.EMPTY;
 
   constructor(private api: ApiService, private state: StateService, public imageFetcher: ImageFetcherService, private router: Router) {
   }
@@ -42,17 +42,20 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
     this.definition = true;
-    this.gameSubscription = this.api.getGame().subscribe((game) => {
-      this.game = game;
-      console.log('GOT GAME', game);
-      this.next();
+    this.gameSubscription = this.api.getGame().subscribe({
+      next: (game) => {
+        this.game = game;
+        console.log('GOT GAME', game);
+        this.next();
+      },
+      error: (err) => {
+        console.error('Failed to load game data', err);
+      }
     });
   }
 
   ngOnDestroy(): void {
-    if (this.gameSubscription) {
-      this.gameSubscription.unsubscribe();
-    }
+    this.gameSubscription.unsubscribe();
   }
 
   next() {

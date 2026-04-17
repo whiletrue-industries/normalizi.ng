@@ -26,8 +26,8 @@
     <span class='header'>Your face and data are being added to the map</span>
     <span>Do you want us to email you a private delete link in case you change your mind?</span>
       <div class='email-input-wrapper'>
-        <input #input type='email' placeholder='your email' [(ngModel)]='emailAddress'
-          (keydown.enter)='onEmailEnterKey($event)'>
+        <input #input type='email' placeholder='your email' aria-label='Email address'
+          [(ngModel)]='emailAddress' (keydown.enter)='onEmailEnterKey($event)'>
         @if (hasEmail) {
           <button class='email-send-btn' type='button' aria-label='Send' (click)='submitEmail()'>&#8594;</button>
         }
