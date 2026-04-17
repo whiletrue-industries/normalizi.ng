@@ -55,6 +55,22 @@
         }
     }
 
+    .mode-badge {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        z-index: 3;
+        .font-source-sans;
+        font-size: 12px;
+        line-height: 14px;
+        color: #FFFFFF;
+        background: rgba(0, 0, 0, 0.55);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 4px;
+        padding: 6px 8px;
+        pointer-events: none;
+    }
+
     .video {
         width: 100%;
         position: relative;
@@ -121,6 +137,27 @@
                 text {
                     font: bold 32px sans-serif;
                     text-anchor: middle;
+                }
+
+                &.dynamic-rings {
+                    overflow: visible;
+                    will-change: transform;
+
+                    .ring-layer {
+                        transform-box: fill-box;
+                        transform-origin: center;
+                        transition: transform 140ms linear;
+                        vector-effect: non-scaling-stroke;
+                        will-change: transform;
+                    }
+
+                    .ring-smallest {
+                        stroke-width: 6;
+                    }
+
+                    .ring-outermost {
+                        transition: none;
+                    }
                 }
         
             }
