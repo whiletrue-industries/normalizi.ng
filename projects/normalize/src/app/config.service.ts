@@ -5,7 +5,7 @@ import { Injectable } from '@angular/core';
 })
 export class ConfigService {
 
-  COLLECTED_FRAMES = 7;
+  COLLECTED_FRAMES = 5;
   IMAGE_SIZE = 300;
   NUM_FEATURES = 5;
   FEATURES = {
@@ -15,10 +15,10 @@ export class ConfigService {
     face: {ratio: 1},
     nose: {ratio: 1.5},
   };
-  TINY = false;
+  TINY = true;
   FEATURE_ORDER = ['nose', 'eyes', 'mouth', 'forehead', 'face'];
   IMAGE_SIZE_BY_INDEX = [];
-  
+
   constructor() {
     for (const feature of this.FEATURE_ORDER) {
       const ratio = this.FEATURES[feature].ratio;
