@@ -84,7 +84,7 @@ export class FaceProcessorService {
     el: HTMLVideoElement | HTMLImageElement,
     skipFramesStart=5,
     snap=this.defaultSnap,
-    options: { lowPower?: boolean } = {}
+    options: { lowPower?: boolean; detectionIntervalMs?: number } = {}
   ) {
     const compositionFrame = this.getCompositionFrame();
     const canvas = document.createElement('canvas');
@@ -121,6 +121,8 @@ export class FaceProcessorService {
     let smoothCenterY: number | null = null;
     let smoothRotation: number | null = null;
     let smoothScale: number | null = null;
+    const detectionIntervalMs = options.lowPower ? (options.detectionIntervalMs ?? 120) : 0;
+    let lastDetectionAt = 0;
 
     const id = 'fps' + Math.random();
     const animationObs = new AnimationObservable(id, this.animationManager);
@@ -142,6 +144,12 @@ export class FaceProcessorService {
         return animationObs.start();  
       }),
       switchMap(() => {
+        const now = performance.now();
+        if (detectionIntervalMs > 0 && lastDetectionAt > 0 && (now - lastDetectionAt) < detectionIntervalMs) {
+          animationObs.continue();
+          return from([]);
+        }
+        lastDetectionAt = now;
         context.drawImage(el, 0, 0, canvas.width, canvas.height);
         return detectSingleFace(canvas, this.detectorOptions).withFaceLandmarks(this.config.TINY).run();
       }),
