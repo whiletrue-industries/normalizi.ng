@@ -14,7 +14,7 @@ import { map, takeWhile } from 'rxjs/operators';
 export class DefinitionComponent implements OnInit {
 
   visible = true;
-  readonly timeoutMs = 10000;
+  readonly timeoutMs = 5000;
   readonly buttonRingLength = 153.94;
   buttonRingOffset = 0;
   private countdownSubscription: Subscription | null = null;

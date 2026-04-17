@@ -122,6 +122,27 @@
                     font: bold 32px sans-serif;
                     text-anchor: middle;
                 }
+
+                &.dynamic-rings {
+                    overflow: visible;
+                    will-change: transform;
+
+                    .ring-layer {
+                        transform-box: fill-box;
+                        transform-origin: center;
+                        transition: transform 140ms linear;
+                        vector-effect: non-scaling-stroke;
+                        will-change: transform;
+                    }
+
+                    .ring-smallest {
+                        stroke-width: 6;
+                    }
+
+                    .ring-outermost {
+                        transition: none;
+                    }
+                }
         
             }
         }

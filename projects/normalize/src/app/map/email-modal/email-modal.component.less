@@ -89,6 +89,41 @@
   cursor: pointer;
 }
 
+.email-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 16px;
+
+  input[type='email'] {
+    flex: 1;
+    margin-bottom: 0;
+    padding-right: 40px;
+  }
+
+  .email-send-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: @color-dark-brown;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      opacity: 0.75;
+    }
+  }
+}
+
 @keyframes remove-countdown-flash {
   0%, 49% {
     box-shadow: inset 0 0 0 1px @color-offtint;

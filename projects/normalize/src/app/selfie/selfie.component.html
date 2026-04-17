@@ -17,7 +17,7 @@
     [style.transform]='transform' [style.transform-origin]='transformOrigin'
     [class.no-detection]='!detected'
   ></video>
-  @if (maskTransform) {
+  @if (maskTransform && !useDynamicRings) {
     <div class='face-mask-wrapper'>
       @if (!detected) {
         <img src='assets/img/face-mask.svg' [style.transform]='maskTransform'>
@@ -26,9 +26,24 @@
   }
   @if (videoHeight) {
     <div class='face-mask-overlay'>
-      <img [class.visible]='!detected' src='assets/img/frame-overlay.svg' [style.transform]='maskOverlayTransform'>
-      <img [class.visible]='detected' src='assets/img/frame-overlay2.svg' [style.transform]='maskOverlayTransform'>
-      <img [class.visible]='detected && allowed' src='assets/img/frame-overlay3.svg' [style.transform]='maskOverlayTransform' [class.flicker]='allowed'>
+      <img [class.visible]='!detected && !useDynamicRings' src='assets/img/frame-overlay.svg' [style.transform]='maskOverlayTransform'>
+      <img [class.visible]='useDynamicRings && !showConfirmedOverlay' src='assets/img/frame-overlay1.svg' [style.transform]='maskOverlayTransform'>
+      @if (useDynamicRings && !showConfirmedOverlay) {
+        <svg class='dynamic-rings' width='1000' height='516' viewBox='0 0 1000 516' fill='none' xmlns='http://www.w3.org/2000/svg' [style.transform]='maskOverlayTransform'>
+          <g>
+            <circle class='ring-layer ring-outermost' cx='500' cy='258' r='199.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[0]'></circle>
+            <circle class='ring-layer' cx='500' cy='258' r='179.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[1]'></circle>
+            <circle class='ring-layer' cx='500' cy='258' r='159.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[2]'></circle>
+            <circle class='ring-layer' cx='500' cy='258' r='139.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[3]'></circle>
+            <circle class='ring-layer' cx='500' cy='258' r='119.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[4]'></circle>
+            <circle class='ring-layer' cx='500' cy='258' r='99.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[5]'></circle>
+            <circle class='ring-layer' cx='500' cy='258' r='79.5' stroke='white' stroke-dasharray='2 2' [style.transform]='ringTransforms[6]'></circle>
+            <circle class='ring-layer ring-smallest' cx='500' cy='258' r='77' stroke='white' stroke-width='6' [style.transform]='centerRingTransformValue'></circle>
+          </g>
+        </svg>
+      }
+      <img [class.visible]='(detected && !useDynamicRings) || (useDynamicRings && showConfirmedOverlay)' src='assets/img/frame-overlay2.svg' [style.transform]='maskOverlayTransform'>
+      <img [class.visible]='((detected && !useDynamicRings) || (useDynamicRings && showConfirmedOverlay)) && allowed' src='assets/img/frame-overlay3.svg' [style.transform]='maskOverlayTransform' [class.flicker]='allowed'>
       <svg width="194" height="254" fill="none" xmlns="http://www.w3.org/2000/svg" [style.transform]='maskOverlayTransform' [style.display]='svgHack ? "none" : "inherit"'>
         <g filter="url(#filter0_d)">
           <text style="mix-blend-mode:lighten" fill='white' transform='scale(-1, 1)translate(-97,60)'>{{countdownText}}</text>

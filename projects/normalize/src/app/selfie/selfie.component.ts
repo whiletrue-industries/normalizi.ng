@@ -7,6 +7,7 @@ import { ApiService } from '../api.service';
 import { StateService } from '../state.service';
 import { Router } from '@angular/router';
 import { debugLog } from '../logger';
+import { environment } from '../../environments/environment';
 
 const PROMPTS = {
   initial: ['', ''],
@@ -17,6 +18,7 @@ const PROMPTS = {
   not_aligned: ['Please', 'align your face'],
   hold_still: ["Avoid uneven shadows on your face", 'then tap'],
   hold_still2: ["That's it", 'now hold still'],
+  camera_error: ['Camera not available', 'please check your camera and try again'],
 }
 
 @Component({
@@ -45,6 +47,14 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   public transform = '';
   public maskTransform = '';
   public transformOrigin = '';
+  public isSlowDevice = false;
+  public useDynamicRings = false;
+  public lowPowerForced = false;
+  public showConfirmedOverlay = false;
+  public dynamicRingsConfirmed = false;
+  public faceOffsetX = 0;
+  public faceOffsetY = 0;
+  public faceScale = 1;
 
   public orientation = '';
   public scale = '';
@@ -62,6 +72,21 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly captureTimeoutMs = 10000;
   readonly captureButtonRingLength = 188.5;
   public captureButtonRingOffset = 0;
+  readonly ringTransitionMs = 200;
+  private readonly ringSmoothingAlpha = 0.24;
+  private readonly ringSmoothingEpsilon = 0.1;
+  private readonly ringParallaxFactors = [0.00, 0.12, 0.24, 0.36, 0.50, 0.66, 0.82];
+  public ringTransforms = this.ringParallaxFactors.map(() => 'translate3d(0px, 0px, 0)');
+  public centerRingTransformValue = 'translate3d(0px, 0px, 0) scale(1)';
+  private ringTargetX = 0;
+  private ringTargetY = 0;
+  private ringTargetScale = 1;
+  private ringRenderX = 0;
+  private ringRenderY = 0;
+  private ringRenderScale = 1;
+  private ringHideTimeout: ReturnType<typeof setTimeout> | null = null;
+  private ringRevealAnimationFrameId: number | null = null;
+  private ringAnimationFrameId: number | null = null;
 
 
   constructor(private faceProcessor: FaceProcessorService, private api: ApiService, private state: StateService,
@@ -99,6 +124,18 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit(): void { 
+    this.isSlowDevice = this.detectSlowDevice();
+    const lowPowerOverride = this.getLowPowerOverrideFromQuery();
+    if (lowPowerOverride !== null) {
+      this.isSlowDevice = lowPowerOverride;
+      this.lowPowerForced = true;
+    }
+    this.useDynamicRings = !this.isSlowDevice;
+    debugLog('SELFIE MODE', {
+      isSlowDevice: this.isSlowDevice,
+      useDynamicRings: this.useDynamicRings,
+      lowPowerForced: this.lowPowerForced,
+    });
     if (!this.state.getGeolocation()) {
       navigator.geolocation.getCurrentPosition((position) => {
         if (position && position.coords) {
@@ -112,8 +149,13 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    defer(async () => this.init()).subscribe(() => {
-      debugLog('initialized');
+    defer(async () => this.init()).subscribe({
+      next: () => { debugLog('initialized'); },
+      error: (e) => {
+        console.error('Camera init failed', e);
+        this.prompts = PROMPTS.camera_error;
+        this.started = true;
+      }
     });
   }
 
@@ -121,23 +163,49 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
     const videoEl: HTMLVideoElement = this.inputVideo.nativeElement;
     const supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
     debugLog('SUPPORTED', JSON.stringify(supportedConstraints));
-    const videoConstraints: any = {};
-    if (supportedConstraints.facingMode) { videoConstraints.facingMode = {exact: 'user'}; }
-    if (supportedConstraints.height) { videoConstraints.height = {min: 960}; }
-    if (supportedConstraints.width) { videoConstraints.width = {min: 540}; }
-    debugLog('CONSTRAINTS', JSON.stringify(supportedConstraints));
-    try {
-      this.videoStream = await navigator.mediaDevices
-        .getUserMedia({
-          video: videoConstraints,
-        });
-    } catch (e) {
-      delete videoConstraints.width;
-      delete videoConstraints.height;
-      this.videoStream = await navigator.mediaDevices
-        .getUserMedia({
-          video: videoConstraints,
-        });
+    const preferredHeight = this.isSlowDevice ? 640 : 960;
+    const preferredWidth = this.isSlowDevice ? 360 : 540;
+
+    const strictConstraints: MediaTrackConstraints = {};
+    if (supportedConstraints.facingMode) {
+      strictConstraints.facingMode = { exact: 'user' };
+    }
+    if (supportedConstraints.height) {
+      strictConstraints.height = { min: preferredHeight };
+    }
+    if (supportedConstraints.width) {
+      strictConstraints.width = { min: preferredWidth };
+    }
+
+    const softConstraints: MediaTrackConstraints = {};
+    if (supportedConstraints.facingMode) {
+      softConstraints.facingMode = { ideal: 'user' };
+    }
+    if (supportedConstraints.height) {
+      softConstraints.height = { ideal: preferredHeight };
+    }
+    if (supportedConstraints.width) {
+      softConstraints.width = { ideal: preferredWidth };
+    }
+
+    const attempts: MediaStreamConstraints[] = [
+      { video: strictConstraints },
+      { video: softConstraints },
+      { video: true },
+    ];
+
+    let lastError: unknown = null;
+    for (const attempt of attempts) {
+      try {
+        this.videoStream = await navigator.mediaDevices.getUserMedia(attempt);
+        break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (!this.videoStream) {
+      throw lastError;
     }
     debugLog('STREAM SIZE', this.videoStream.getVideoTracks()[0].getSettings().width, this.videoStream.getVideoTracks()[0].getSettings().height);
 
@@ -180,13 +248,19 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   triggerDetectFaces() {
     const videoEl: HTMLVideoElement = this.inputVideo.nativeElement;
     debugLog('DETECTING FACES...');
-    this.faceProcessor.processFaces(videoEl, 5)
+    this.faceProcessor.processFaces(videoEl, 5, this.faceProcessor.defaultSnap, { lowPower: this.isSlowDevice })
       .subscribe((event) => {
         // console.log('EVENT', event);
         if (event.kind === 'start') {
           debugLog('STARTED!');
           this.prompts = PROMPTS.no_detection;
           this.started = true;
+          this.faceOffsetX = 0;
+          this.faceOffsetY = 0;
+          this.faceScale = 1;
+          this.showConfirmedOverlay = false;
+          this.dynamicRingsConfirmed = false;
+          this.updateRingTransforms(true);
         } else if (event.kind === 'transform') {
           this.transform = event.transform;
           this.transformOrigin = event.transformOrigin;
@@ -194,7 +268,20 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
           this.distance = (event.distance as Number).toFixed(2);
           this.orientation = (event.orientation as Number).toFixed(1);;
           this.scale = (event.scale as Number).toFixed(2);;
+          this.faceScale = Number.isFinite(event.scale) ? event.scale : 1;
           this.detected = event.snapped;
+          if (this.useDynamicRings) {
+            const hasTracking = event.faceOffsetX !== undefined;
+            const offsetX = Number.isFinite(event.faceOffsetX) ? event.faceOffsetX : 0;
+            const offsetY = Number.isFinite(event.faceOffsetY) ? event.faceOffsetY : 0;
+            if (event.snapped) {
+              this.animateRingsToCenter(true);
+            } else if (hasTracking) {
+              this.animateRingsFromCenter(offsetX, offsetY);
+            } else {
+              this.animateRingsToCenter(false);
+            }
+          }
           if (event.snapped) {
             if (!this._allowed && this.captureCountdownSubscription === null) {
               this.startCaptureCountdown();
@@ -263,7 +350,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
       tap(() => {
         this.flashActive = true;
       }),
-      delay(3000)
+      delay(1500)
     );
   }
 
@@ -307,6 +394,144 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
     this.captureButtonRingOffset = 0;
   }
 
+  private detectSlowDevice(): boolean {
+    const navAny = navigator as any;
+    const hardwareConcurrency = Number(navigator.hardwareConcurrency || 0);
+    const deviceMemory = Number(navAny.deviceMemory || 0);
+    const ua = navigator.userAgent || '';
+    const isAndroid = /Android/i.test(ua);
+
+    if (deviceMemory > 0 && deviceMemory <= 4) {
+      return true;
+    }
+    if (hardwareConcurrency > 0 && hardwareConcurrency <= 4) {
+      return true;
+    }
+    if (isAndroid && (deviceMemory <= 6 || hardwareConcurrency <= 6)) {
+      return true;
+    }
+    return false;
+  }
+
+  private getLowPowerOverrideFromQuery(): boolean | null {
+    if (environment.production) {
+      return null;
+    }
+    const search = new URLSearchParams(location.search);
+    const raw = search.get('lowpower') ?? search.get('low-power');
+    if (raw === null) {
+      return null;
+    }
+    const normalized = raw.trim().toLowerCase();
+    if (['0', 'false', 'off', 'no'].includes(normalized)) {
+      return false;
+    }
+    if (['1', 'true', 'on', 'yes'].includes(normalized)) {
+      return true;
+    }
+    return true;
+  }
+
+  private cancelRingTimers() {
+    if (this.ringHideTimeout) {
+      clearTimeout(this.ringHideTimeout);
+      this.ringHideTimeout = null;
+    }
+
+    if (this.ringRevealAnimationFrameId !== null) {
+      cancelAnimationFrame(this.ringRevealAnimationFrameId);
+      this.ringRevealAnimationFrameId = null;
+    }
+
+    if (this.ringAnimationFrameId !== null) {
+      cancelAnimationFrame(this.ringAnimationFrameId);
+      this.ringAnimationFrameId = null;
+    }
+  }
+
+  private animateRingsFromCenter(targetX: number, targetY: number) {
+    this.cancelRingTimers();
+    this.showConfirmedOverlay = false;
+    this.dynamicRingsConfirmed = false;
+
+    this.faceOffsetX = targetX;
+    this.faceOffsetY = targetY;
+    this.updateRingTransforms();
+  }
+
+  private animateRingsToCenter(showConfirmedOverlay: boolean) {
+    this.cancelRingTimers();
+    this.dynamicRingsConfirmed = showConfirmedOverlay;
+    this.faceOffsetX = 0;
+    this.faceOffsetY = 0;
+    this.updateRingTransforms();
+    this.ringHideTimeout = setTimeout(() => {
+      this.showConfirmedOverlay = showConfirmedOverlay;
+      this.dynamicRingsConfirmed = false;
+      this.ringHideTimeout = null;
+    }, this.ringTransitionMs);
+  }
+
+  private updateRingTransforms(immediate = false) {
+    this.ringTargetX = this.faceOffsetX;
+    this.ringTargetY = this.faceOffsetY;
+    this.ringTargetScale = Number.isFinite(this.faceScale) && this.faceScale > 0 ? 1 / this.faceScale : 1;
+
+    if (immediate) {
+      this.ringRenderX = this.ringTargetX;
+      this.ringRenderY = this.ringTargetY;
+      this.ringRenderScale = this.ringTargetScale;
+      this.applyRingTransforms();
+      return;
+    }
+    this.startRingAnimationLoop();
+  }
+
+  private startRingAnimationLoop() {
+    if (this.ringAnimationFrameId !== null) {
+      return;
+    }
+    const step = () => {
+      const alpha = this.ringSmoothingAlpha;
+      this.ringRenderX += (this.ringTargetX - this.ringRenderX) * alpha;
+      this.ringRenderY += (this.ringTargetY - this.ringRenderY) * alpha;
+      this.ringRenderScale += (this.ringTargetScale - this.ringRenderScale) * alpha;
+
+      const doneX = Math.abs(this.ringTargetX - this.ringRenderX) < this.ringSmoothingEpsilon;
+      const doneY = Math.abs(this.ringTargetY - this.ringRenderY) < this.ringSmoothingEpsilon;
+      const doneScale = Math.abs(this.ringTargetScale - this.ringRenderScale) < 0.001;
+
+      if (doneX) {
+        this.ringRenderX = this.ringTargetX;
+      }
+      if (doneY) {
+        this.ringRenderY = this.ringTargetY;
+      }
+      if (doneScale) {
+        this.ringRenderScale = this.ringTargetScale;
+      }
+
+      this.applyRingTransforms();
+
+      if (doneX && doneY && doneScale) {
+        this.ringAnimationFrameId = null;
+        return;
+      }
+      this.ringAnimationFrameId = requestAnimationFrame(step);
+    };
+    this.ringAnimationFrameId = requestAnimationFrame(step);
+  }
+
+  private applyRingTransforms() {
+    const baseX = this.ringRenderX;
+    const baseY = this.ringRenderY;
+    for (let i = 0; i < this.ringParallaxFactors.length; i++) {
+      const t = this.ringParallaxFactors[i];
+      this.ringTransforms[i] = `translate3d(${baseX * t}px, ${baseY * t}px, 0)`;
+    }
+    this.centerRingTransformValue = `translate3d(${baseX}px, ${baseY}px, 0) scale(${this.ringRenderScale})`;
+  }
+
   set allowed(value) {
     debugLog('ALLOWED=', value);
     this._allowed = value;
@@ -329,6 +554,7 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy() {
     this.stopCaptureCountdown();
+    this.cancelRingTimers();
     if (this.promptOutTimeout) {
       clearTimeout(this.promptOutTimeout);
       this.promptOutTimeout = null;
