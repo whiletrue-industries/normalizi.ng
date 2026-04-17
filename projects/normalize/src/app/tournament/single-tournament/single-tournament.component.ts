@@ -4,6 +4,7 @@ import { debounceTime, delay, first, tap } from 'rxjs/operators';
 import { ConfigService } from '../../config.service';
 import { ImageFetcherService } from '../../image-fetcher.service';
 import { StateService } from '../../state.service';
+import { debugLog } from '../../logger';
 
 @Component({
     selector: 'app-single-tournament',
@@ -51,7 +52,7 @@ export class SingleTournamentComponent implements OnInit, OnChanges, AfterViewIn
 
   ngOnInit(): void {
     if (this.stateSvc.gallery) {
-      console.log('STARTING TOURNAMENT TIMEOUT');
+      debugLog('STARTING TOURNAMENT TIMEOUT');
       this.triggerTimeout.pipe(
         debounceTime(30000),
       ).subscribe(() => {
@@ -61,7 +62,7 @@ export class SingleTournamentComponent implements OnInit, OnChanges, AfterViewIn
   }
 
   ngOnChanges() {
-    console.log('TRIGGERING TOURNAMENT TIMEOUT');
+    debugLog('TRIGGERING TOURNAMENT TIMEOUT');
     this.triggerTimeout.next(true);
     from([true]).pipe(
       tap(() => {
@@ -96,7 +97,7 @@ export class SingleTournamentComponent implements OnInit, OnChanges, AfterViewIn
   }
 
   select(candidate) {
-    console.log('WINNER', candidate.id);
+    debugLog('WINNER', candidate.id);
     const winner = candidate.id
     let loser = -1;
     for (const c of this.candidates) {

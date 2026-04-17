@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
 import { from, fromEvent, Subject, Subscription } from 'rxjs';
 import { debounceTime, delay, map, tap, throttle, throttleTime } from 'rxjs/operators';
+import { debugLog } from '../../logger';
 
 @Component({
     selector: 'app-slider',
@@ -101,14 +102,14 @@ export class SliderComponent implements OnInit, AfterViewInit, OnDestroy {
           if (!this.markSelected) {
             this.markSelected = true;
             selected = this.currentIdx * 2 - 1;
-            console.log('SELECTING CLICKED', selected);
+            debugLog('SELECTING CLICKED', selected);
             this.updatePosition(-this.width / 2 * selected);
           }
         }
         else if ((this.position >= this.width * 0.25)) {
           if (!this.markSelected) {
             this.markSelected = true;
-            console.log('SELECTING', -1);
+            debugLog('SELECTING', -1);
             selected = -1;
             this.updatePosition(this.width / 2);
           }
@@ -116,7 +117,7 @@ export class SliderComponent implements OnInit, AfterViewInit, OnDestroy {
         else if (this.position <= -this.width * 0.25) {
           if (!this.markSelected) {
             this.markSelected = true;
-            console.log('SELECTING', 1);
+            debugLog('SELECTING', 1);
             selected = 1;
             this.updatePosition(-this.width / 2);
           }

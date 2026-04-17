@@ -17,6 +17,7 @@ const PROMPTS = {
   not_aligned: ['Please', 'align your face'],
   hold_still: ["Avoid uneven shadows on your face", 'then tap'],
   hold_still2: ["That's it", 'now hold still'],
+  camera_error: ['Camera not available', 'please check your camera and try again'],
 }
 
 @Component({
@@ -112,8 +113,13 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    defer(async () => this.init()).subscribe(() => {
-      debugLog('initialized');
+    defer(async () => this.init()).subscribe({
+      next: () => { debugLog('initialized'); },
+      error: (e) => {
+        console.error('Camera init failed', e);
+        this.prompts = PROMPTS.camera_error;
+        this.started = true;
+      }
     });
   }
 
@@ -134,10 +140,24 @@ export class SelfieComponent implements OnInit, AfterViewInit, OnDestroy {
     } catch (e) {
       delete videoConstraints.width;
       delete videoConstraints.height;
-      this.videoStream = await navigator.mediaDevices
-        .getUserMedia({
-          video: videoConstraints,
-        });
+      try {
+        this.videoStream = await navigator.mediaDevices
+          .getUserMedia({
+            video: videoConstraints,
+          });
+      } catch (e2) {
+        // facingMode: exact may be unsupported on desktop cameras — fall back to any camera
+        delete videoConstraints.facingMode;
+        try {
+          this.videoStream = await navigator.mediaDevices
+            .getUserMedia({
+              video: Object.keys(videoConstraints).length ? videoConstraints : true,
+            });
+        } catch (e3) {
+          // All getUserMedia attempts failed — propagate so the subscriber error handler shows camera_error
+          throw e3;
+        }
+      }
     }
     debugLog('STREAM SIZE', this.videoStream.getVideoTracks()[0].getSettings().width, this.videoStream.getVideoTracks()[0].getSettings().height);
 

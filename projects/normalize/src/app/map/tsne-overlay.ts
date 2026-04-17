@@ -4,6 +4,7 @@ import { euclideanDistance } from 'face-api.js';
 import { GridItem, ImageItem } from '../datatypes';
 import { first, map, tap } from 'rxjs/operators';
 import { ImageFetcherService } from '../image-fetcher.service';
+import { debugLog } from '../logger';
 
 class Overlaid {
   image: GridItem;
@@ -34,7 +35,7 @@ export class TSNEOverlay {
         }
       });
       if (!found) {
-        console.log('NOT FOUND in GRID');
+        debugLog('NOT FOUND in GRID');
         let bestImage = null;
         let bestDistance = null;
         this.grid.forEach((gi) => {
@@ -45,7 +46,7 @@ export class TSNEOverlay {
           }
         });
         const emptyPosition = this.findEmpty(bestImage);
-        console.log('EMPTY POSITION', bestImage, bestDistance, emptyPosition);
+        debugLog('EMPTY POSITION', bestImage, bestDistance, emptyPosition);
         const overlay = new L.ImageOverlay(
           this.imageFetcher.fetchFaceImage(image.image),
           [[-emptyPosition.y-0.75, emptyPosition.x+0.25], [-emptyPosition.y-0.25, emptyPosition.x+0.75]]
@@ -56,7 +57,7 @@ export class TSNEOverlay {
         this.grid.push(gi);
         return gi;
       } else {
-        console.log('FOUND in GRID');
+        debugLog('FOUND in GRID');
         // const bounds: L.LatLngBoundsExpression = [[-found.pos.y-1, found.pos.x], [-found.pos.y, found.pos.x+1]];
         return found;
       }

@@ -156,6 +156,12 @@ export class EmailModalComponent implements OnInit, OnDestroy, OnChanges {
     });
   }
 
+  onEmailEnterKey(event: Event): void {
+    if (this.hasEmail) {
+      this.submitEmail();
+    }
+  }
+
   submitEmail(): void {
     this.state.pushRequest(this.api.sendEmail(this.hasEmail ? this.emailAddress : null));
     this.state.setAskedForEmail();
@@ -172,13 +178,6 @@ export class EmailModalComponent implements OnInit, OnDestroy, OnChanges {
     const el = this.input ? this.input.nativeElement as HTMLInputElement : null;
     const valid = !el || el.checkValidity();
     return !!this.emailAddress && valid;
-  }
-
-  onEmailEnterKey(event: KeyboardEvent): void {
-    event.preventDefault();
-    if (this.hasEmail) {
-      this.submitEmail();
-    }
   }
 
   set emailAddress(value: string) {

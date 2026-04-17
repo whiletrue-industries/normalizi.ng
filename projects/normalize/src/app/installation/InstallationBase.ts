@@ -2,6 +2,7 @@ import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild } from "@angular
 import { forkJoin, interval, ReplaySubject, Subscription } from "rxjs";
 import { first, switchMap } from "rxjs/operators";
 import { ApiService } from "../api.service";
+import { debugLog } from '../logger';
 import { OutputMapComponent } from "../output-map/output-map.component";
 
 import * as L from 'leaflet';
@@ -68,7 +69,7 @@ export class InstallationBase implements AfterViewInit, OnInit, OnDestroy {
         this.api.getMapConfiguration().pipe(
             switchMap((config: any) => {
                 if (config.set !== this.configuration.set) {
-                    console.log('SET CHANGED!!!');
+                    debugLog('SET CHANGED!!!');
                     this.configuration = config;
                     this.grid.next(this.configuration.grid);
                     this.createMap();

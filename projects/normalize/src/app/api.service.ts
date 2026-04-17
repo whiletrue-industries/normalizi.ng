@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { from, Observable, ReplaySubject } from 'rxjs';
+import { from, Observable } from 'rxjs';
 import { map, switchMap, tap } from 'rxjs/operators';
 
 import { environment } from '../environments/environment';
@@ -12,7 +12,6 @@ import { StateService } from './state.service';
   providedIn: 'root'
 })
 export class ApiService {
-  game: ReplaySubject<any>;
 
   constructor(private http: HttpClient, private state: StateService) { }
 
@@ -22,15 +21,7 @@ export class ApiService {
   }
 
   getGame() {
-    if (this.game) {
-      return this.game;
-    }
-    this.game = new ReplaySubject<any>(1);
-    return this.http.get(environment.endpoints.getGame).pipe(
-      tap((game) => {
-        this.game.next(game);
-      }),
-    );
+    return this.http.get(environment.endpoints.getGame);
   }
 
   getImage(id): Observable<ImageItem> {
@@ -90,7 +81,7 @@ export class ApiService {
     if (id && magic) {
       return this.http.post(environment.endpoints.deleteItem, null, {params: {id, magic}}).pipe(
         tap((res) => {
-          console.log('DELETE ITEM RESULT', res);
+          debugLog('DELETE ITEM RESULT', res);
         })
       );
     } else {
