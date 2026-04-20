@@ -79,6 +79,7 @@ def get_latest_handler(request: Request):
             if result and found_update_key is not None:
                 logging.info(f'UPDATING {idx} WITH KEY {found_update_key} (last_shown={last_shown})')
                 connection.execute(text(update.format(idx=idx)), id=result['id'])
+                connection.commit()
         if result is not None:
             result['created_timestamp'] = result['created_timestamp'].isoformat()
         response = dict(

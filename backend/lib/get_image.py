@@ -13,7 +13,7 @@ fetch_image = text('''SELECT
     votes_2, tournaments_2, 
     votes_3, tournaments_3, 
     votes_4, tournaments_4,
-    descriptor, landmarks, gender_age, place_name, created_timestamp from FACES WHERE id = :id''')
+    descriptor, landmarks, gender_age, place_name, created_timestamp, allowed from FACES WHERE id = :id''')
 
 
 def get_image_handler(request: Request):
