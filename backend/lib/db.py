@@ -1,9 +1,13 @@
 import os
-from sqlalchemy import create_engine
-import sqlalchemy
+from functools import cache
 
-engine: sqlalchemy.engine.Engine
-if 'DATABASE_URL' in os.environ:
-    engine = create_engine(os.environ['DATABASE_URL'])
-else:
-    engine = None
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+
+
+@cache
+def get_engine() -> Engine:
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        raise RuntimeError("DATABASE_URL is not set")
+    return create_engine(url, future=True)
