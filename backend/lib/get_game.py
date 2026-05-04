@@ -9,7 +9,7 @@ from .net import HEADERS
 fetch_random = text(
     """
     WITH a AS (
-        SELECT id, image, votes, tournaments, descriptor, landmarks, gender_age, place_name, allowed
+        SELECT id, image, votes, tournaments, descriptor, landmarks, gender_age, place_name
         FROM faces
         WHERE allowed > 0
         ORDER BY tournaments

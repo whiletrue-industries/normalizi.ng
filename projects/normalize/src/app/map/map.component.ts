@@ -82,8 +82,7 @@ export class MapComponent implements OnInit, AfterViewInit {
     this.api.getMapConfiguration().subscribe((config) => {
       this.configuration = config;
       const grid: GridItem[] = Array.isArray(this.configuration.grid) ? this.configuration.grid : [];
-      this.blockedGridItems = grid.filter((item) => this.isBlockedItem(item));
-      this.configuration.grid = grid.filter((item) => !this.isBlockedItem(item));
+      this.configuration.grid = grid;
       this.dim = this.configuration.dim;
       this.ready.next();
       this.ready.complete();
@@ -235,11 +234,6 @@ export class MapComponent implements OnInit, AfterViewInit {
               map((item: any) => {
                 const existsInGrid = this.configuration?.grid?.some((gridItem: GridItem) => gridItem.item.id === expectedId);
                 if (!existsInGrid) {
-                  this.blockItemById(expectedId);
-                  expectedId = null;
-                  return null;
-                }
-                if (this.isBlockedItem(item)) {
                   this.blockItemById(expectedId);
                   expectedId = null;
                   return null;
@@ -476,14 +470,6 @@ export class MapComponent implements OnInit, AfterViewInit {
       { color: 'transparent', weight: 0, fillColor: this.blockedMaskColor, fillOpacity: 1, interactive: false }
     ).addTo(this.map);
     this.blockedMasks.push(mask);
-  }
-
-  private isBlockedItem(item: any): boolean {
-    if (!item) {
-      return false;
-    }
-    const allowedValue = item?.item?.allowed ?? item?.allowed;
-    return Number(allowedValue) === -1;
   }
 
   focusOnSelf() {

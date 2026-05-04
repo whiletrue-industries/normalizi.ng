@@ -15,7 +15,7 @@ fetch_image = text(
         votes_2, tournaments_2,
         votes_3, tournaments_3,
         votes_4, tournaments_4,
-        descriptor, landmarks, gender_age, place_name, created_timestamp, allowed
+        descriptor, landmarks, gender_age, place_name, created_timestamp
     FROM faces WHERE id = :id
     """
 )
