@@ -6,9 +6,9 @@ from sqlalchemy.sql import text
 from .db import get_engine
 from .net import HEADERS
 
-update_sql = text("UPDATE faces SET tournaments=tournaments+:t, votes=votes+:v WHERE id=:id AND allowed > 0")
+update_sql = text("UPDATE faces SET tournaments=tournaments+:t, votes=votes+:v WHERE id=:id AND allowed >= 0")
 per_feature_updates_sql = [
-    text(f"UPDATE faces SET tournaments_{i}=tournaments_{i}+:t, votes_{i}=votes_{i}+:v WHERE id=:id AND allowed > 0")
+    text(f"UPDATE faces SET tournaments_{i}=tournaments_{i}+:t, votes_{i}=votes_{i}+:v WHERE id=:id AND allowed >= 0")
     for i in range(5)
 ]
 

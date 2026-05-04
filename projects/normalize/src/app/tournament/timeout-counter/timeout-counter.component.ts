@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { TIMEOUT } from 'dns';
 import { interval } from 'rxjs';
 import { take } from 'rxjs/operators';
+import { debugLog } from '../../logger';
 
 @Component({
     selector: 'app-timeout-counter',
@@ -35,7 +36,7 @@ export class TimeoutCounterComponent implements OnInit {
   }
 
   cancel() {
-    console.log('CANCEL');
+    debugLog('CANCEL');
     this.canceled.emit();
     return false;
   }

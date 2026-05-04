@@ -1,10 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
-import { from } from 'rxjs';
-import { map, switchMap, tap } from 'rxjs/operators';
+import { from, Subscription } from 'rxjs';
+import { first, map, switchMap, tap } from 'rxjs/operators';
 import { ApiService } from '../../api.service';
 import { ImageFetcherService } from '../../image-fetcher.service';
 import { StateService } from '../../state.service';
+import { debugLog } from '../../logger';
 
 @Component({
     selector: 'app-game',
@@ -12,7 +13,7 @@ import { StateService } from '../../state.service';
     styleUrls: ['./game.component.less'],
     standalone: false
 })
-export class GameComponent implements OnInit {
+export class GameComponent implements OnInit, OnDestroy {
 
   TUPLES_PER_FEATURE = 3;
   FEATURES = [
@@ -30,26 +31,61 @@ export class GameComponent implements OnInit {
   loaded = false;
   definition = true;
   idsCount = {};
+  private gameSaved = false;
+  private gameSubscription: Subscription = Subscription.EMPTY;
 
   constructor(private api: ApiService, private state: StateService, public imageFetcher: ImageFetcherService, private router: Router) {
-    api.getGame().subscribe((game) => {
-      this.game = game;
-      console.log('GOT GAME', game);
-      this.next();
-    })
   }
 
   ngOnInit(): void {
+    if (this.state.getPlayed()) {
+      this.router.navigate(['/']);
+      return;
+    }
     this.definition = true;
+    this.gameSubscription = this.api.getGame().subscribe({
+      next: (game) => {
+        this.game = game;
+        debugLog('GOT GAME', game);
+        this.next();
+      },
+      error: (err) => {
+        console.error('Failed to load game data', err);
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.gameSubscription.unsubscribe();
   }
 
   next() {
     if (this.index < this.maxIndex) {
       if (this.tuples.length === 0) {
         this.index += 1;
+        if (this.index === this.maxIndex) {
+          this.saveGameResults();
+          return;
+        }
+        // Re-fetch to pick up any moderation changes (e.g. allowed set to -1) since last fetch
+        this.api.getGame().pipe(first()).subscribe({
+          next: (game) => { this.game = game; this.buildTuples(); },
+          error: () => { this.buildTuples(); }
+        });
+      } else {
+        this.candidates = this.tuples.shift();
+      }
+    }
+  }
+
+  private buildTuples() {
         this.feature = this.FEATURES[this.index];
         const forbidden = Object.keys(this.idsCount).filter((id) => this.idsCount[id] > 2).map((id) => parseInt(id, 10));
         this.tuples = this.randomTuples(this.TUPLES_PER_FEATURE, forbidden);
+        if (this.tuples.length === 0) {
+          // All records were forbidden — retry with no restrictions to avoid skipping this feature
+          this.tuples = this.randomTuples(this.TUPLES_PER_FEATURE, []);
+        }
         this.tuples.forEach((t) => {
           for (let item of t) {
             const id = item.id;
@@ -57,17 +93,27 @@ export class GameComponent implements OnInit {
           }
         });
         if (this.feature === 4) {
-          if (this.state.getOwnImageID()) {
-            this.tuples[this.tuples.length - 1][1] = {id: -1, image: this.state.getOwnImageID()};
+          const ownImageID = this.state.getOwnImageID();
+          const ownItemID = this.state.getOwnItemID();
+          const isDeleted = this.state.getLastDeletedOwnItemID() === ownItemID;
+          if (ownImageID && this.tuples.length > 0 && !isDeleted && ownItemID > 0) {
+            // Verify own item is still allowed before injecting into tournament
+            this.api.getImage(ownItemID).pipe(first()).subscribe({
+              next: (item: any) => {
+                if (item && item.allowed >= 0) {
+                  this.tuples[this.tuples.length - 1][1] = {id: -1, image: ownImageID};
+                }
+                this.candidates = this.tuples.shift();
+              },
+              error: () => {
+                // Item not found or not allowed — skip injection
+                this.candidates = this.tuples.shift();
+              }
+            });
+            return; // candidates will be set in the subscribe callback above
           }
         }
-      }
-      this.candidates = this.tuples.shift();
-      // console.log('CANDIDATES', this.candidates);
-      if (this.index === this.maxIndex) {
-        this.saveGameResults();
-      }
-    }
+        this.candidates = this.tuples.shift();
   }
 
   shuffleArray(array) {
@@ -79,7 +125,7 @@ export class GameComponent implements OnInit {
 
   randomTuples(count, forbidden) {
     const ret = [];
-    const records = [...this.game.records];
+    const records = (this.game?.records || []).filter((r) => r.allowed == null || r.allowed > 0);
     this.shuffleArray(records);
     records.sort((a, b) => {
       return (this.idsCount[a.id] || 0) - (this.idsCount[b.id] || 0);
@@ -124,7 +170,11 @@ export class GameComponent implements OnInit {
   }
 
   saveGameResults() {
+    if (this.gameSaved) {
+      return;
+    }
     if (this.results && this.results.length) {
+      this.gameSaved = true;
       this.state.pushRequest(
         from([this.results]).pipe(
           map((results) => {
@@ -134,7 +184,7 @@ export class GameComponent implements OnInit {
             return this.api.saveGameResults(results);
           }),
           tap(() => {
-            console.log('SAVED');
+            debugLog('SAVED');
             this.results = [];
           })
         )

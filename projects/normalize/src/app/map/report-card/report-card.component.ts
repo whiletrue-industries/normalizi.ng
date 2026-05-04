@@ -4,6 +4,7 @@ import { Location } from '@angular/common';
 import { ImageItem } from '../../datatypes';
 import { ImageFetcherService } from '../../image-fetcher.service';
 import { StateService } from '../../state.service';
+import { debugLog } from '../../logger';
 
 @Component({
     selector: 'app-report-card',
@@ -99,7 +100,7 @@ export class ReportCardComponent implements OnInit, OnChanges, OnDestroy {
       text: url,
       url: url
     }).then((result) => {
-      console.log('Share result:', result);
+      debugLog('Share result:', result);
     });
   }
 }
