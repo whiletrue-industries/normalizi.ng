@@ -63,29 +63,9 @@ export class GameComponent implements OnInit, OnDestroy {
     if (this.index < this.maxIndex) {
       if (this.tuples.length === 0) {
         this.index += 1;
-        if (this.index === this.maxIndex) {
-          this.saveGameResults();
-          return;
-        }
-        // Re-fetch to pick up any moderation changes (e.g. allowed set to -1) since last fetch
-        this.api.getGame().pipe(first()).subscribe({
-          next: (game) => { this.game = game; this.buildTuples(); },
-          error: () => { this.buildTuples(); }
-        });
-      } else {
-        this.candidates = this.tuples.shift();
-      }
-    }
-  }
-
-  private buildTuples() {
         this.feature = this.FEATURES[this.index];
         const forbidden = Object.keys(this.idsCount).filter((id) => this.idsCount[id] > 2).map((id) => parseInt(id, 10));
         this.tuples = this.randomTuples(this.TUPLES_PER_FEATURE, forbidden);
-        if (this.tuples.length === 0) {
-          // All records were forbidden — retry with no restrictions to avoid skipping this feature
-          this.tuples = this.randomTuples(this.TUPLES_PER_FEATURE, []);
-        }
         this.tuples.forEach((t) => {
           for (let item of t) {
             const id = item.id;
@@ -93,27 +73,16 @@ export class GameComponent implements OnInit, OnDestroy {
           }
         });
         if (this.feature === 4) {
-          const ownImageID = this.state.getOwnImageID();
-          const ownItemID = this.state.getOwnItemID();
-          const isDeleted = this.state.getLastDeletedOwnItemID() === ownItemID;
-          if (ownImageID && this.tuples.length > 0 && !isDeleted && ownItemID > 0) {
-            // Verify own item is still allowed before injecting into tournament
-            this.api.getImage(ownItemID).pipe(first()).subscribe({
-              next: (item: any) => {
-                if (item && item.allowed >= 0) {
-                  this.tuples[this.tuples.length - 1][1] = {id: -1, image: ownImageID};
-                }
-                this.candidates = this.tuples.shift();
-              },
-              error: () => {
-                // Item not found or not allowed — skip injection
-                this.candidates = this.tuples.shift();
-              }
-            });
-            return; // candidates will be set in the subscribe callback above
+          if (this.state.getOwnImageID()) {
+            this.tuples[this.tuples.length - 1][1] = {id: -1, image: this.state.getOwnImageID()};
           }
         }
-        this.candidates = this.tuples.shift();
+      }
+      this.candidates = this.tuples.shift();
+      if (this.index === this.maxIndex) {
+        this.saveGameResults();
+      }
+    }
   }
 
   shuffleArray(array) {
@@ -125,7 +94,7 @@ export class GameComponent implements OnInit, OnDestroy {
 
   randomTuples(count, forbidden) {
     const ret = [];
-    const records = (this.game?.records || []).filter((r) => r.allowed == null || r.allowed > 0);
+    const records = [...this.game.records];
     this.shuffleArray(records);
     records.sort((a, b) => {
       return (this.idsCount[a.id] || 0) - (this.idsCount[b.id] || 0);
@@ -170,11 +139,7 @@ export class GameComponent implements OnInit, OnDestroy {
   }
 
   saveGameResults() {
-    if (this.gameSaved) {
-      return;
-    }
     if (this.results && this.results.length) {
-      this.gameSaved = true;
       this.state.pushRequest(
         from([this.results]).pipe(
           map((results) => {

@@ -1,43 +1,39 @@
 import json
-from sqlalchemy.sql import text
-from flask import Request, Response
 
-from .db import engine
+from flask import Request, Response
+from sqlalchemy.sql import text
+
+from .db import get_engine
 from .net import HEADERS
 
-update_sql = text('UPDATE faces SET tournaments=tournaments+:t, votes=votes+:v WHERE id=:id AND allowed >= 0')
+update_sql = text("UPDATE faces SET tournaments=tournaments+:t, votes=votes+:v WHERE id=:id")
 per_feature_updates_sql = [
-    text(f'UPDATE faces SET tournaments_{i}=tournaments_{i}+:t, votes_{i}=votes_{i}+:v WHERE id=:id AND allowed >= 0')
+    text(f"UPDATE faces SET tournaments_{i}=tournaments_{i}+:t, votes_{i}=votes_{i}+:v WHERE id=:id")
     for i in range(5)
 ]
 
 
-def game_results_handler(request: Request):
-    if request.method == 'OPTIONS':
-        return Response('', headers=HEADERS)
-    if request.method == 'POST':
-        content = request.json
-        results = content['results']
-        updates = dict()
-        for item in results:
-            winner, loser, feature = tuple(item)
-            updates.setdefault(winner, dict(f=feature, t=0, v=0))['t'] += 1
-            updates.setdefault(loser, dict(f=feature, t=0, v=0))['t'] += 1
-            updates[winner]['v'] += 1
-        with engine.connect() as connection:
-            for id, update in updates.items():
-                feature = update.pop('f')
-                connection.execute(update_sql, t=update['t'], v=update['v'], id=id)
-                connection.execute(per_feature_updates_sql[feature], t=update['t'], v=update['v'], id=id)
-            connection.commit()
-        response = dict(
-            success=True, updated=len(updates)
-        )
-        return Response(
-            json.dumps(response),
-            headers=HEADERS
-        )
-    return Response(
-        json.dumps(dict(success=False)),
-        headers=HEADERS
-    )
+def game_results_handler(request: Request) -> Response:
+    if request.method == "OPTIONS":
+        return Response("", headers=HEADERS)
+    if request.method != "POST":
+        return Response(json.dumps({"success": False}), headers=HEADERS)
+
+    content = request.json or {}
+    results = content.get("results", [])
+    updates: dict[int, dict] = {}
+    for item in results:
+        winner, loser, feature = tuple(item)
+        updates.setdefault(winner, {"f": feature, "t": 0, "v": 0})["t"] += 1
+        updates.setdefault(loser, {"f": feature, "t": 0, "v": 0})["t"] += 1
+        updates[winner]["v"] += 1
+
+    with get_engine().connect() as connection:
+        for id_, update in updates.items():
+            feature = update["f"]
+            params = {"t": update["t"], "v": update["v"], "id": id_}
+            connection.execute(update_sql, params)
+            connection.execute(per_feature_updates_sql[feature], params)
+        connection.commit()
+
+    return Response(json.dumps({"success": True, "updated": len(updates)}), headers=HEADERS)

@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "normalize-backend"
+version = "0.2.0"
+description = "Backend handlers for normalizi.ng, deployed as Google Cloud Functions."
+requires-python = ">=3.12"
+dependencies = [
+    "sqlalchemy>=2.0,<3",
+    "psycopg2-binary>=2.9",
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "scikit-learn>=1.4",
+    "scikit-image>=0.22",
+    "Pillow>=10",
+    "boto3>=1.34",
+    "requests>=2.31",
+    "geopy>=2.4",
+    "flask>=3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-mock>=3",
+    "moto[s3]>=5",
+    "responses>=0.25",
+    "ruff>=0.5",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lib*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+filterwarnings = [
+    "error::DeprecationWarning:lib.*",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = [
+    "E501",
+    "B008",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]

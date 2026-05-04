@@ -1,98 +1,99 @@
+import json
 import logging
 import os
-import json
-from sqlalchemy.sql import text
-from flask import Request, Response
 
-from .db import engine
+from flask import Request, Response
+from sqlalchemy.sql import text
+
+from .db import get_engine
 from .net import HEADERS
 
 logging.getLogger().setLevel(logging.INFO)
 
 
-UPDATE_KEYS = {
-    1: os.environ.get('UPDATE_KEY_1') or os.environ.get('UPDATE_KEY'),
-    2: os.environ.get('UPDATE_KEY_2')
-}
+def _update_keys() -> dict[int, str | None]:
+    return {
+        1: os.environ.get("UPDATE_KEY_1") or os.environ.get("UPDATE_KEY"),
+        2: os.environ.get("UPDATE_KEY_2"),
+    }
 
-query_new = '''
-    SELECT id, image, votes, tournaments, 
-        votes_0, tournaments_0, 
-        votes_1, tournaments_1, 
-        votes_2, tournaments_2, 
-        votes_3, tournaments_3, 
+
+_QUERY_NEW = """
+    SELECT id, image, votes, tournaments,
+        votes_0, tournaments_0,
+        votes_1, tournaments_1,
+        votes_2, tournaments_2,
+        votes_3, tournaments_3,
         votes_4, tournaments_4,
         descriptor, landmarks, gender_age, place_name, created_timestamp,
         last_shown_1, last_shown_2
     FROM faces
-    where last_shown_{idx} is null and allowed>0
-    ORDER BY id asc
+    WHERE last_shown_{idx} IS NULL AND allowed > 0
+    ORDER BY id ASC
     LIMIT 1
-'''
-query_any = '''
-    SELECT id, image, votes, tournaments, 
-        votes_0, tournaments_0, 
-        votes_1, tournaments_1, 
-        votes_2, tournaments_2, 
-        votes_3, tournaments_3, 
+"""
+_QUERY_ANY = """
+    SELECT id, image, votes, tournaments,
+        votes_0, tournaments_0,
+        votes_1, tournaments_1,
+        votes_2, tournaments_2,
+        votes_3, tournaments_3,
         votes_4, tournaments_4,
         descriptor, landmarks, gender_age, place_name, created_timestamp,
         last_shown_1, last_shown_2
     FROM faces
-    where last_shown_{idx} is not null and allowed>0
-    ORDER BY last_shown_{idx} asc
+    WHERE last_shown_{idx} IS NOT NULL AND allowed > 0
+    ORDER BY last_shown_{idx} ASC
     LIMIT 1
-'''
-update = '''
-    UPDATE FACES set last_shown_{idx}=now() where id=:id
-'''
+"""
+_UPDATE = "UPDATE faces SET last_shown_{idx}=now() WHERE id=:id"
 
 
-def get_latest_handler(request: Request):
-    if request.method == 'OPTIONS':
-        return Response('', headers=HEADERS)
-    if request.method == 'GET':
-        with engine.connect() as connection:
-            idx = 1
-            update_key = request.args.get('key')
-            found_update_key = None
-            for k, v in UPDATE_KEYS.items():
-                if v == update_key:
-                    idx = k
-                    found_update_key = v
-                    break
-            rows = connection.execute(text(query_new.format(idx=idx)))
-            result = None
-            for row in rows:
-                row = dict(row)
-                result = row
-                break
-            if result is None:
-                rows = connection.execute(text(query_any.format(idx=idx)))
-                for row in rows:
-                    row = dict(row)
-                    result = row
-                    break
-            last_shown = None
-            if result is not None:
-                last_shown = [result.pop('last_shown_1'), result.pop('last_shown_2')]
-            if result and found_update_key is not None:
-                logging.info(f'UPDATING {idx} WITH KEY {found_update_key} (last_shown={last_shown})')
-                connection.execute(text(update.format(idx=idx)), id=result['id'])
-                connection.commit()
+def _first_row(result):
+    for row in result:
+        return dict(row._mapping)
+    return None
+
+
+def get_latest_handler(request: Request) -> Response:
+    if request.method == "OPTIONS":
+        return Response("", headers=HEADERS)
+    if request.method != "GET":
+        return Response(json.dumps({"success": False}), headers=HEADERS)
+
+    idx = 1
+    update_key = request.args.get("key")
+    found_update_key = None
+    for k, v in _update_keys().items():
+        if v is not None and v == update_key:
+            idx = k
+            found_update_key = v
+            break
+    # idx is one of 1 or 2 — safe to interpolate into SQL template.
+    if idx not in (1, 2):
+        idx = 1
+
+    with get_engine().connect() as connection:
+        result = _first_row(connection.execute(text(_QUERY_NEW.format(idx=idx))))
+        if result is None:
+            result = _first_row(connection.execute(text(_QUERY_ANY.format(idx=idx))))
+
+        last_shown = None
         if result is not None:
-            result['created_timestamp'] = result['created_timestamp'].isoformat()
-        response = dict(
-            success=result is not None, record=result
-        )
-        response = Response(
-            json.dumps(response),
-            headers=HEADERS
-        )
-        response.cache_control.max_age = 10
-        return response
+            last_shown = [result.pop("last_shown_1"), result.pop("last_shown_2")]
+        if result and found_update_key is not None:
+            logging.info("UPDATING %s WITH KEY %s (last_shown=%s)", idx, found_update_key, last_shown)
+            connection.execute(text(_UPDATE.format(idx=idx)), {"id": result["id"]})
+            connection.commit()
 
-    return Response(
-        json.dumps(dict(success=False)),
-        headers=HEADERS
+    if result is not None:
+        ts = result.get("created_timestamp")
+        if ts is not None:
+            result["created_timestamp"] = ts.isoformat()
+
+    response = Response(
+        json.dumps({"success": result is not None, "record": result}),
+        headers=HEADERS,
     )
+    response.cache_control.max_age = 10
+    return response
