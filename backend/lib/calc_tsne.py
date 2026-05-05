@@ -321,7 +321,7 @@ def main(
         print("Starting image loaders")
         loaders = list(all_loaders)
         loaders[0].start()
-        loaders[0].fini() 
+        loaders[0].fini()
         print("First loader done, starting t-SNE computation")
 
         try:
