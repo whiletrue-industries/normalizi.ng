@@ -231,17 +231,8 @@ export class MapComponent implements OnInit, AfterViewInit {
           expectedId = parseInt(sharedId);
           items.push(
             this.api.getImage(expectedId).pipe(
-              map((item: any) => {
-                const existsInGrid = this.configuration?.grid?.some((gridItem: GridItem) => gridItem.item.id === expectedId);
-                if (!existsInGrid) {
-                  this.blockItemById(expectedId);
-                  expectedId = null;
-                  return null;
-                }
-                return item as ImageItem;
-              }),
+              map((item: any) => item as ImageItem),
               catchError(() => {
-                this.blockItemById(expectedId);
                 expectedId = null;
                 return from([null]);
               })
