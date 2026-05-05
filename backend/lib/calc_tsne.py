@@ -290,6 +290,7 @@ def fetch_previous_input_hash() -> str | None:
 
 def upload_input_hash(input_hash: str) -> bool:
     buff = BytesIO(input_hash.encode("utf-8"))
+    print(f"Uploading input hash {input_hash} to {_INPUT_HASH_URL}")
     return upload_fileobj_s3(buff, _INPUT_HASH_KEY, "text/plain")
 
 
