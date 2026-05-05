@@ -1,7 +1,6 @@
 import { ElementRef, OnDestroy, ViewChild } from '@angular/core';
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
-import { debounceTime, first } from 'rxjs/operators';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { first } from 'rxjs/operators';
 import { ApiService } from '../../api.service';
 import { ImageFetcherService } from '../../image-fetcher.service';
 import { StateService } from '../../state.service';
@@ -12,7 +11,7 @@ import { StateService } from '../../state.service';
     styleUrls: ['./email-modal.component.less'],
     standalone: false
 })
-export class EmailModalComponent implements OnInit, OnDestroy, OnChanges {
+export class EmailModalComponent implements OnDestroy, OnChanges {
 
   @Input() open = true;
   @Output() closed = new EventEmitter<string>();
@@ -29,34 +28,35 @@ export class EmailModalComponent implements OnInit, OnDestroy, OnChanges {
 
   private autoDeleteTimerHandle: ReturnType<typeof setTimeout> | null = null;
   private countdownIntervalHandle: ReturnType<typeof setInterval> | null = null;
+  private emailIdleTimerHandle: ReturnType<typeof setTimeout> | null = null;
+  private hasSubmitted = false;
   private readonly AUTO_DELETE_DELAY_MS = 25000;
   private readonly COUNTDOWN_SECONDS = 10;
-
-  triggerEmailTimeout = new BehaviorSubject<boolean>(null);
+  private readonly EMAIL_IDLE_TIMEOUT_MS = 30000;
 
   constructor(private api: ApiService, private state: StateService, public imageFetcher: ImageFetcherService) { }
-
-  ngOnInit(): void {
-    this.ensureConfirmationImage();
-    this.startAutoDeleteTimer();
-    this.triggerEmailTimeout.pipe(
-      debounceTime(30000),
-      first()
-    ).subscribe(() => {
-      if (this.phase === 1) {
-        this.submitEmail();
-      }
-    });
-  }
 
   ngOnDestroy(): void {
     this.clearTimers();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes.open?.currentValue === true) {
-      this.ensureConfirmationImage();
+    if (!changes.open) {
+      return;
     }
+    if (changes.open.currentValue === true) {
+      this.resetForOpen();
+    } else {
+      this.clearTimers();
+    }
+  }
+
+  private resetForOpen(): void {
+    this.phase = 0;
+    this._emailAddress = null;
+    this.hasSubmitted = false;
+    this.ensureConfirmationImage();
+    this.startAutoDeleteTimer();
   }
 
   private startAutoDeleteTimer(): void {
@@ -87,11 +87,30 @@ export class EmailModalComponent implements OnInit, OnDestroy, OnChanges {
       clearInterval(this.countdownIntervalHandle);
       this.countdownIntervalHandle = null;
     }
+    this.clearEmailIdleTimer();
+  }
+
+  private startEmailIdleTimer(): void {
+    this.clearEmailIdleTimer();
+    this.emailIdleTimerHandle = setTimeout(() => {
+      this.emailIdleTimerHandle = null;
+      if (this.phase === 1 && !this.hasSubmitted) {
+        this.submitEmail();
+      }
+    }, this.EMAIL_IDLE_TIMEOUT_MS);
+  }
+
+  private clearEmailIdleTimer(): void {
+    if (this.emailIdleTimerHandle !== null) {
+      clearTimeout(this.emailIdleTimerHandle);
+      this.emailIdleTimerHandle = null;
+    }
   }
 
   addToMap(): void {
     this.clearTimers();
     this.phase = 1;
+    this.startEmailIdleTimer();
   }
 
   backToConfirmation(): void {
@@ -163,12 +182,22 @@ export class EmailModalComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   submitEmail(): void {
+    if (this.hasSubmitted) {
+      return;
+    }
+    this.hasSubmitted = true;
+    this.clearTimers();
     this.state.pushRequest(this.api.sendEmail(this.hasEmail ? this.emailAddress : null));
     this.state.setAskedForEmail();
     this.closed.emit('added');
   }
 
   noThanks(): void {
+    if (this.hasSubmitted) {
+      return;
+    }
+    this.hasSubmitted = true;
+    this.clearTimers();
     this.state.pushRequest(this.api.sendEmail(null));
     this.state.setAskedForEmail();
     this.closed.emit('added');
@@ -182,7 +211,9 @@ export class EmailModalComponent implements OnInit, OnDestroy, OnChanges {
 
   set emailAddress(value: string) {
     this._emailAddress = value;
-    this.triggerEmailTimeout.next(true);
+    if (this.phase === 1) {
+      this.startEmailIdleTimer();
+    }
   }
 
   get emailAddress() {
