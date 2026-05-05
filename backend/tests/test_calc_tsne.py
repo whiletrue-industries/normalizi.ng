@@ -286,3 +286,44 @@ def test_main_finalizes_image_loaders_on_error(monkeypatch, mock_s3_upload):
     # Every created loader must have been finalized.
     assert sorted(fini_calls) == [i.id for i in instances]
     assert mock_s3_upload == []
+
+
+def test_main_uploads_tsne_json_with_cache_control(monkeypatch, mock_s3_upload):
+    """tsne.json should be uploaded with a Cache-Control header so client browsers
+    don't cache it indefinitely under the no-cache-headers heuristic."""
+    fake_ids = [{"id": 1, "image": "img1"}, {"id": 2, "image": "img2"}]
+    fake_activations = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
+
+    monkeypatch.setattr(calc_tsne_module, "load_activations", lambda: (fake_ids, fake_activations))
+    monkeypatch.setattr(calc_tsne_module, "fetch_previous_input_hash", lambda: None)
+
+    class _FakeImageLoader:
+        def __init__(self, *a, **kw):
+            pass
+        def start(self):
+            pass
+        def fini(self):
+            pass
+
+    monkeypatch.setattr(calc_tsne_module, "ImageLoader", _FakeImageLoader)
+    monkeypatch.setattr(calc_tsne_module, "generate_tsne", lambda *a, **kw: np.zeros((2, 2)))
+    monkeypatch.setattr(calc_tsne_module, "calc_tsne_grid", lambda *a, **kw: np.zeros((2, 2)))
+    monkeypatch.setattr(
+        calc_tsne_module,
+        "create_tsne_image",
+        lambda *a, **kw: (Image.new("RGBA", (8, 8)), {"dim": 2, "grid": []}),
+    )
+    monkeypatch.setattr(calc_tsne_module, "create_tiles", lambda *a, **kw: None)
+
+    class _Resp:
+        status_code = 200
+        @staticmethod
+        def json():
+            return {"set": 0}
+    monkeypatch.setattr(calc_tsne_module.requests, "get", lambda *a, **kw: _Resp())
+
+    calc_tsne_module.main(to_plot=2)
+
+    tsne_json_uploads = [c for c in mock_s3_upload if c["filename"] == "tsne.json"]
+    assert len(tsne_json_uploads) == 1
+    assert tsne_json_uploads[0]["cache_control"] == "no-cache"
