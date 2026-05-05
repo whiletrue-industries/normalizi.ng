@@ -272,7 +272,9 @@ def compute_input_hash(ids: list[dict], activations: list) -> str:
         h.update(b":")
         h.update(json.dumps(descriptor, separators=(",", ":")).encode("utf-8"))
         h.update(b"\n")
-    return h.hexdigest()
+    ret = h.hexdigest()
+    print(f"Computed input hash: {ret}")
+    return ret
 
 
 def fetch_previous_input_hash() -> str | None:
@@ -304,7 +306,9 @@ def main(
     activations = activations[:to_plot]
 
     input_hash = compute_input_hash(ids, activations)
-    if not skip_upload and fetch_previous_input_hash() == input_hash:
+    prev_input_hash = fetch_previous_input_hash()
+    print(f"Previous input hash: {prev_input_hash}")
+    if not skip_upload and prev_input_hash == input_hash:
         print(f"t-SNE inputs unchanged (hash {input_hash[:12]}); skipping recomputation.")
         return
 
