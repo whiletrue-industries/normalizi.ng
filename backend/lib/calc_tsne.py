@@ -1,4 +1,5 @@
 import concurrent.futures
+import hashlib
 import json
 import math
 from io import BytesIO
@@ -250,62 +251,116 @@ IMAGES = [
     ("faces", (300, 300), (1200, 0)),
 ]
 
+_INPUT_HASH_KEY = "tsne-input.sha256"
+_INPUT_HASH_URL = f"https://normalizing-us-files.fra1.digitaloceanspaces.com/{_INPUT_HASH_KEY}"
 
-def main():
-    perplexity = 50
-    tsne_iter = 5000
+
+def compute_input_hash(ids: list[dict], activations: list) -> str:
+    """SHA-256 over the (id, descriptor) pairs that feed t-SNE.
+
+    Stable across runs: the load_activations query orders by id DESC so input
+    order is deterministic given the same row set. Vote counts and other
+    metadata are deliberately excluded — they don't affect the layout, so
+    changing them alone shouldn't trigger a recompute.
+    """
+    h = hashlib.sha256()
+    for item, descriptor in zip(ids, activations, strict=True):
+        h.update(str(item["id"]).encode("utf-8"))
+        h.update(b":")
+        h.update(json.dumps(descriptor, separators=(",", ":")).encode("utf-8"))
+        h.update(b"\n")
+    return h.hexdigest()
+
+
+def fetch_previous_input_hash() -> str | None:
+    """Read the input hash persisted by the previous run, or None if unavailable."""
+    try:
+        resp = requests.get(_INPUT_HASH_URL, timeout=10)
+    except requests.RequestException:
+        return None
+    if resp.status_code != 200:
+        return None
+    return resp.text.strip() or None
+
+
+def upload_input_hash(input_hash: str) -> bool:
+    buff = BytesIO(input_hash.encode("utf-8"))
+    return upload_fileobj_s3(buff, _INPUT_HASH_KEY, "text/plain")
+
+
+def main(
+    to_plot: int = 450,
+    out_dim: int = 30,
+    tsne_iter: int = 5000,
+    perplexity: int = 50,
+    side: int = 256,
+    skip_upload: bool = False,
+):
     ids, activations = load_activations()
-    out_dim = 30
-    to_plot = 450
-    side = 256
     ids = ids[:to_plot]
-    loaders = []
+    activations = activations[:to_plot]
+
+    input_hash = compute_input_hash(ids, activations)
+    if not skip_upload and fetch_previous_input_hash() == input_hash:
+        print(f"t-SNE inputs unchanged (hash {input_hash[:12]}); skipping recomputation.")
+        return
+
+    all_loaders = []
     for _filename, img_size, img_location in IMAGES:
         w, h = img_size
         dim = max(w, h)
         size = side / 2
-        loaders.append(
+        all_loaders.append(
             ImageLoader(
-                [item["image"] for item in ids[0:to_plot]],
+                [item["image"] for item in ids],
                 [int(size * w / dim), int(size * h / dim), img_location, img_size],
             )
         )
-    loaders[0].start()
 
     try:
-        current_config = requests.get(
-            "https://normalizing-us-files.fra1.digitaloceanspaces.com/tsne.json",
-            timeout=10,
-        ).json()
-        current_set = current_config.get("set", 0)
-    except (requests.RequestException, ValueError):
-        current_set = 0
-    current_set = (current_set + 1) % 10
+        loaders = list(all_loaders)
+        loaders[0].start()
 
-    print("Generating 2D representation.")
-    X_2d = generate_tsne(activations, to_plot, perplexity, tsne_iter)
-    print(f"Generating image grid ({out_dim}x{out_dim}, {len(ids)} images)")
-    grid = calc_tsne_grid(X_2d, out_dim)
+        try:
+            current_config = requests.get(
+                "https://normalizing-us-files.fra1.digitaloceanspaces.com/tsne.json",
+                timeout=10,
+            ).json()
+            current_set = current_config.get("set", 0)
+        except (requests.RequestException, ValueError):
+            current_set = 0
+        current_set = (current_set + 1) % 10
 
-    info: dict = {}
-    for filename, img_size, _img_location in IMAGES:
-        w, h = img_size
-        dim = max(w, h)
-        size = side / 2
-        size_tuple = (int(size * w / dim), int(size * h / dim))
-        offset = (int((side - size_tuple[0]) / 2), int((side - size_tuple[1]) / 2))
-        image, info = create_tsne_image(
-            grid, ids, out_dim, to_plot, (side, side), offset, size_tuple, loaders.pop(0)
-        )
-        info["set"] = current_set
-        if len(loaders) > 0:
-            loaders[0].start()
-        create_tiles(filename, image, out_dim, (side, side), info, current_set)
+        print("Generating 2D representation.")
+        X_2d = generate_tsne(activations, to_plot, perplexity, tsne_iter)
+        print(f"Generating image grid ({out_dim}x{out_dim}, {len(ids)} images)")
+        grid = calc_tsne_grid(X_2d, out_dim)
 
-    json_buff = BytesIO()
-    json_buff.write(json.dumps(info).encode("utf8"))
-    json_buff.seek(0)
-    upload_fileobj_s3(json_buff, "tsne.json", "application/json")
+        info: dict = {}
+        for filename, img_size, _img_location in IMAGES:
+            w, h = img_size
+            dim = max(w, h)
+            size = side / 2
+            size_tuple = (int(size * w / dim), int(size * h / dim))
+            offset = (int((side - size_tuple[0]) / 2), int((side - size_tuple[1]) / 2))
+            image, info = create_tsne_image(
+                grid, ids, out_dim, to_plot, (side, side), offset, size_tuple, loaders.pop(0)
+            )
+            info["set"] = current_set
+            if len(loaders) > 0:
+                loaders[0].start()
+            if not skip_upload:
+                create_tiles(filename, image, out_dim, (side, side), info, current_set)
+
+        if not skip_upload:
+            json_buff = BytesIO()
+            json_buff.write(json.dumps(info).encode("utf8"))
+            json_buff.seek(0)
+            upload_fileobj_s3(json_buff, "tsne.json", "application/json")
+            upload_input_hash(input_hash)
+    finally:
+        for loader in all_loaders:
+            loader.fini()
 
 
 def calc_tsne_handler(event, context):

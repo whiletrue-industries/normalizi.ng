@@ -25,6 +25,8 @@ Handlers are deployed as Google Cloud Functions. Each exported function in `back
 | `delete-item` | `delete_item_handler` | HTTP POST |
 | `calc_tsne` | `calc_tsne_handler` | Event-triggered (Cloud Tasks / Pub/Sub) |
 
+`calc_tsne` short-circuits when the descriptor set is unchanged. It hashes the `(id, descriptor)` pairs of the rows it would feed into t-SNE and compares against `tsne-input.sha256` in the public DO Spaces bucket. If they match, the run logs a "skipping recomputation" line and exits without running t-SNE, regenerating tiles, or re-uploading `tsne.json`. To force a full recompute, delete `tsne-input.sha256` from the bucket.
+
 ### Runtime
 
 - Python 3.12.
