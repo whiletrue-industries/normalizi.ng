@@ -351,6 +351,14 @@ export class MapComponent implements OnInit, AfterViewInit {
     this.drawerOpen = false
   }
 
+  retake() {
+    if (this.state.getOwnItemID()) {
+      this.state.pushRequest(this.api.deleteOwnItem());
+    }
+    this.state.fullClear();
+    this.start(true);
+  }
+
   delete() {
     this.drawerOpen = false
     this.deleteModalOpen = true
