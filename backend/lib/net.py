@@ -24,10 +24,19 @@ def get_client():
     )
 
 
-def upload_fileobj_s3(buff: BytesIO, filename: str, content_type: str) -> bool:
+def upload_fileobj_s3(
+    buff: BytesIO,
+    filename: str,
+    content_type: str,
+    cache_control: str | None = None,
+) -> bool:
     global _uploaded
     bucket = os.environ["BUCKET_NAME"]
     client = get_client()
+
+    extra_args: dict[str, str] = {"ACL": "public-read", "ContentType": content_type}
+    if cache_control:
+        extra_args["CacheControl"] = cache_control
 
     success = False
     for _ in range(3):
@@ -36,7 +45,7 @@ def upload_fileobj_s3(buff: BytesIO, filename: str, content_type: str) -> bool:
             buff,
             bucket,
             filename,
-            ExtraArgs={"ACL": "public-read", "ContentType": content_type},
+            ExtraArgs=extra_args,
         )
         head = client.head_object(Bucket=bucket, Key=filename)
         success = bool(head["ContentLength"])

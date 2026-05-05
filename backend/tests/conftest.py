@@ -179,9 +179,14 @@ def mock_s3_upload(monkeypatch):
     """Replace lib.net.upload_fileobj_s3 with a recorder. Returns the call log."""
     calls: list[dict[str, Any]] = []
 
-    def _fake_upload(buff, filename, content_type):
+    def _fake_upload(buff, filename, content_type, cache_control=None):
         data = buff.getvalue() if hasattr(buff, "getvalue") else None
-        calls.append({"filename": filename, "content_type": content_type, "bytes": len(data) if data else None})
+        calls.append({
+            "filename": filename,
+            "content_type": content_type,
+            "cache_control": cache_control,
+            "bytes": len(data) if data else None,
+        })
         return True
 
     import lib.net as net_module

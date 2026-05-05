@@ -49,3 +49,36 @@ def test_upload_fileobj_s3_missing_bucket_raises(monkeypatch):
     # Bucket is never created — upload_fileobj will raise.
     with pytest.raises(Exception):  # noqa: B017 - boto3 raises ClientError subclass
         net.upload_fileobj_s3(BytesIO(b"data"), "path/file.txt", "text/plain")
+
+
+@mock_aws
+def test_upload_fileobj_s3_sets_cache_control(monkeypatch):
+    net.get_client.cache_clear()
+    monkeypatch.setattr(net, "get_client", lambda: boto3.client("s3", region_name="us-east-1"))
+
+    client = net.get_client()
+    client.create_bucket(Bucket="test-bucket")
+
+    net.upload_fileobj_s3(
+        BytesIO(b"data"),
+        "tsne.json",
+        "application/json",
+        cache_control="no-cache",
+    )
+
+    head = client.head_object(Bucket="test-bucket", Key="tsne.json")
+    assert head["CacheControl"] == "no-cache"
+
+
+@mock_aws
+def test_upload_fileobj_s3_omits_cache_control_when_unset(monkeypatch):
+    net.get_client.cache_clear()
+    monkeypatch.setattr(net, "get_client", lambda: boto3.client("s3", region_name="us-east-1"))
+
+    client = net.get_client()
+    client.create_bucket(Bucket="test-bucket")
+
+    net.upload_fileobj_s3(BytesIO(b"data"), "tiles/x.png", "image/png")
+
+    head = client.head_object(Bucket="test-bucket", Key="tiles/x.png")
+    assert "CacheControl" not in head

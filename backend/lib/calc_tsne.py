@@ -364,7 +364,12 @@ def main(
             json_buff = BytesIO()
             json_buff.write(json.dumps(info).encode("utf8"))
             json_buff.seek(0)
-            upload_fileobj_s3(json_buff, "tsne.json", "application/json")
+            upload_fileobj_s3(
+                json_buff,
+                "tsne.json",
+                "application/json",
+                cache_control="no-cache",
+            )
             upload_input_hash(input_hash)
     finally:
         for loader in all_loaders:
