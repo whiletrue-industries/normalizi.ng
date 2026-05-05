@@ -14,9 +14,12 @@ from PIL import Image
 from scipy.optimize import linear_sum_assignment
 from scipy.spatial.distance import cdist
 
+import lib.calc_tsne as calc_tsne_module
 from lib.calc_tsne import (
     array_to_img,
     calc_tsne_grid,
+    compute_input_hash,
+    fetch_previous_input_hash,
     generate_tsne,
     img_to_array,
     process_item,
@@ -148,3 +151,138 @@ def test_process_item_truncates_and_rounds():
     out = process_item(item)
     assert out["descriptor"] == [0.123, 0.678, -0.432]
     assert out["landmarks"] == [{"x": 10, "y": 20}, {"x": 30, "y": 40}]
+
+
+# ---------- compute_input_hash ----------
+
+def test_compute_input_hash_deterministic():
+    ids = [{"id": 1, "image": "a"}, {"id": 2, "image": "b"}]
+    activations = [[0.1, 0.2], [0.3, 0.4]]
+    assert compute_input_hash(ids, activations) == compute_input_hash(ids, activations)
+
+
+def test_compute_input_hash_changes_with_id():
+    descriptors = [[0.1, 0.2]]
+    assert compute_input_hash([{"id": 1}], descriptors) != compute_input_hash([{"id": 2}], descriptors)
+
+
+def test_compute_input_hash_changes_with_descriptor():
+    ids = [{"id": 1}]
+    assert compute_input_hash(ids, [[0.1, 0.2]]) != compute_input_hash(ids, [[0.1, 0.3]])
+
+
+def test_compute_input_hash_changes_with_order():
+    """load_activations orders by id DESC, so a different order represents a different DB state."""
+    ids_a = [{"id": 1}, {"id": 2}]
+    ids_b = [{"id": 2}, {"id": 1}]
+    descriptors_a = [[0.1], [0.2]]
+    descriptors_b = [[0.2], [0.1]]
+    assert compute_input_hash(ids_a, descriptors_a) != compute_input_hash(ids_b, descriptors_b)
+
+
+# ---------- fetch_previous_input_hash ----------
+
+def test_fetch_previous_input_hash_returns_text(monkeypatch):
+    class _Resp:
+        status_code = 200
+        text = "deadbeef\n"
+
+    monkeypatch.setattr(calc_tsne_module.requests, "get", lambda *a, **kw: _Resp())
+    assert fetch_previous_input_hash() == "deadbeef"
+
+
+def test_fetch_previous_input_hash_returns_none_on_404(monkeypatch):
+    class _Resp:
+        status_code = 404
+        text = "not found"
+
+    monkeypatch.setattr(calc_tsne_module.requests, "get", lambda *a, **kw: _Resp())
+    assert fetch_previous_input_hash() is None
+
+
+def test_fetch_previous_input_hash_returns_none_on_network_error(monkeypatch):
+    def _raise(*a, **kw):
+        raise calc_tsne_module.requests.ConnectionError("boom")
+
+    monkeypatch.setattr(calc_tsne_module.requests, "get", _raise)
+    assert fetch_previous_input_hash() is None
+
+
+def test_fetch_previous_input_hash_returns_none_on_empty_body(monkeypatch):
+    class _Resp:
+        status_code = 200
+        text = "   \n"
+
+    monkeypatch.setattr(calc_tsne_module.requests, "get", lambda *a, **kw: _Resp())
+    assert fetch_previous_input_hash() is None
+
+
+# ---------- main() skip path ----------
+
+def test_main_skips_when_input_hash_matches(monkeypatch, mock_s3_upload):
+    """When the previous hash matches the current input, main() returns without
+    running t-SNE, fetching tsne.json, or uploading anything."""
+    fake_ids = [{"id": 1, "image": "img1"}, {"id": 2, "image": "img2"}]
+    fake_activations = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
+    expected = compute_input_hash(fake_ids, fake_activations)
+
+    monkeypatch.setattr(calc_tsne_module, "load_activations", lambda: (fake_ids, fake_activations))
+    monkeypatch.setattr(calc_tsne_module, "fetch_previous_input_hash", lambda: expected)
+
+    def _fail_generate(*a, **kw):
+        raise AssertionError("generate_tsne must not be called when hash matches")
+    monkeypatch.setattr(calc_tsne_module, "generate_tsne", _fail_generate)
+
+    def _fail_get(*a, **kw):
+        raise AssertionError("requests.get must not be called when hash matches")
+    monkeypatch.setattr(calc_tsne_module.requests, "get", _fail_get)
+
+    calc_tsne_module.main(to_plot=2)
+
+    assert mock_s3_upload == []
+
+
+def test_main_finalizes_image_loaders_on_error(monkeypatch, mock_s3_upload):
+    """If the pipeline raises after ImageLoader.start(), all loaders' executors
+    must still be shut down — otherwise their threads leak."""
+    fake_ids = [{"id": 1, "image": "img1"}, {"id": 2, "image": "img2"}]
+    fake_activations = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
+
+    monkeypatch.setattr(calc_tsne_module, "load_activations", lambda: (fake_ids, fake_activations))
+    monkeypatch.setattr(calc_tsne_module, "fetch_previous_input_hash", lambda: None)
+
+    fini_calls: list[int] = []
+    start_calls: list[int] = []
+    instances: list[object] = []
+
+    class _FakeImageLoader:
+        def __init__(self, images, args):
+            self.images = images
+            self.id = len(instances)
+            instances.append(self)
+
+        def start(self):
+            start_calls.append(self.id)
+
+        def fini(self):
+            fini_calls.append(self.id)
+
+    monkeypatch.setattr(calc_tsne_module, "ImageLoader", _FakeImageLoader)
+
+    def _boom(*a, **kw):
+        raise RuntimeError("simulated failure mid-pipeline")
+    monkeypatch.setattr(calc_tsne_module, "generate_tsne", _boom)
+
+    class _Resp:
+        status_code = 200
+        @staticmethod
+        def json():
+            return {"set": 0}
+    monkeypatch.setattr(calc_tsne_module.requests, "get", lambda *a, **kw: _Resp())
+
+    with pytest.raises(RuntimeError, match="simulated failure"):
+        calc_tsne_module.main(to_plot=2)
+
+    # Every created loader must have been finalized.
+    assert sorted(fini_calls) == [i.id for i in instances]
+    assert mock_s3_upload == []
