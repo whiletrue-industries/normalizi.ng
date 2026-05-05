@@ -13,7 +13,7 @@
     <app-about-card [showStart]='!hasSelfie' (start)='start()'></app-about-card>
   }
   @if (focusedItem) {
-    <app-report-card [item]='focusedItem.item' (delete)='delete()' (start)='start(true)'></app-report-card>
+    <app-report-card [item]='focusedItem.item' (delete)='delete()' (start)='retake()'></app-report-card>
   }
 </app-drawer>
 @if (!hasSelfie) {
