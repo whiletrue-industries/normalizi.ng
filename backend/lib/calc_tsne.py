@@ -307,7 +307,7 @@ def main(
 
     input_hash = compute_input_hash(ids, activations)
     prev_input_hash = fetch_previous_input_hash()
-    print(f"Previous input hash: {prev_input_hash}")
+    print(f"Previous input hash is: {prev_input_hash}")
     if not skip_upload and prev_input_hash == input_hash:
         print(f"t-SNE inputs unchanged (hash {input_hash[:12]}); skipping recomputation.")
         return
