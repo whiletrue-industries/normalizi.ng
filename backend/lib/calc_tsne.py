@@ -77,7 +77,8 @@ class ImageLoader:
                 print("FAILED", retry, "to fetch", img_url, "exp", str(e))
 
         if resp is None or resp.status_code != 200:
-            raise RuntimeError(f"Failed to fetch image {id}")
+            self.queue.put((id, None))
+            print(f"Failed to fetch image {id}")
 
         img = Image.open(BytesIO(resp.content))
         img = img.crop(
@@ -199,6 +200,8 @@ def create_tsne_image(grid_jv, img_collection, out_dim, to_plot, res, offset, ou
         assert (pos_x, pos_y) not in used
         used.add((pos_x, pos_y))
         img = loader.get_image(item["image"])
+        if img is None:
+            continue
         h_range = pos_y * out_res_y + offset_y
         w_range = pos_x * out_res_x + offset_x
         out[h_range:h_range + out_size_y, w_range:w_range + out_size_x] = img_to_array(img)
