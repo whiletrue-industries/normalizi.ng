@@ -3,7 +3,6 @@ import hashlib
 import json
 import math
 from io import BytesIO
-from queue import Queue
 
 import numpy as np
 import requests
@@ -39,13 +38,11 @@ def array_to_img(arr: np.ndarray, mode: str | None = None) -> Image.Image:
 class ImageLoader:
     def __init__(self, images, args):
         self.concurrency = 32
-        self.queue: Queue = Queue()
         self.images = images
         self.args = args
         assert len(set(self.images)) == len(images), "Duplicate image id"
 
         self.image_fetches = 0
-        self.queue_recv = 0
         self.cache: dict = {}
         self.executor: concurrent.futures.ThreadPoolExecutor | None = None
 
@@ -53,7 +50,7 @@ class ImageLoader:
         print(f"Fetching {len(self.images)} images")
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.concurrency)
         for image in self.images:
-            self.executor.submit(self.load_image, image, *self.args, self.queue)
+            self.executor.submit(self.load_image, image, *self.args)
         print("Done submitting")
 
     def fini(self):
@@ -63,7 +60,7 @@ class ImageLoader:
             self.executor = None
         print("Finalizing executor done")
 
-    def load_image(self, id, out_res_x, out_res_y, img_location, img_size, queue):
+    def load_image(self, id, out_res_x, out_res_y, img_location, img_size):
         img_url = f"https://normalizing-us-files.fra1.cdn.digitaloceanspaces.com/photos/{id}_full.png"
         resp = None
         for retry in range(10):
@@ -77,8 +74,8 @@ class ImageLoader:
                 print("FAILED", retry, "to fetch", img_url, "exp", str(e))
 
         if resp is None or resp.status_code != 200:
-            self.queue.put((id, None))
             print(f"Failed to fetch image {id}")
+            return None
 
         img = Image.open(BytesIO(resp.content))
         img = img.crop(
@@ -91,19 +88,14 @@ class ImageLoader:
         )
         img = img.convert("RGB")
         img = img.resize((out_res_x, out_res_y), Image.NEAREST)
-        self.queue.put((id, img))
+        self.cache[id] = img
 
     def get_image(self, need_id):
         assert need_id in self.images, f"Image {need_id} not in set"
-        while need_id not in self.cache:
-            id, img = self.queue.get()
-            self.cache[id] = img
-            self.queue_recv += 1
-
         self.image_fetches += 1
         if self.image_fetches % 100 == 0:
-            print("...", self.image_fetches, self.queue_recv, len(self.cache))
-        return self.cache.pop(need_id)
+            print("...", self.image_fetches, len(self.cache))
+        return self.cache.pop(need_id, None)
 
 
 _LOAD_ACTIVATIONS = text(
@@ -326,8 +318,11 @@ def main(
         )
 
     try:
+        print("Starting image loaders")
         loaders = list(all_loaders)
         loaders[0].start()
+        loaders[0].fini() 
+        print("First loader done, starting t-SNE computation")
 
         try:
             current_config = requests.get(
