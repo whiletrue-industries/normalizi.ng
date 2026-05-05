@@ -60,15 +60,12 @@ export class MapComponent implements OnInit, AfterViewInit {
   redirectModalOpen = false;
   emailModalOpen = false;
   deleteModalOpen = false;
-  blockedGridItems: GridItem[] = [];
-  blockedMasks: L.Rectangle[] = [];
 
   private readonly transitionEase = 0.12;
   private readonly zoomOutDurationSec = 1.35;
   private readonly zoomInDurationSec = 1.65;
   private readonly drawerMoveDurationSec = 1.1;
   private readonly mapBackgroundColor = '#EAE7DF';
-  private readonly blockedMaskColor = '#2D2C29';
 
   @ViewChild(OutputMapComponent) mapElement: OutputMapComponent;
   @ViewChild(EmailModalComponent) emailModal: EmailModalComponent;
@@ -148,7 +145,6 @@ export class MapComponent implements OnInit, AfterViewInit {
         // Create map
         this.map = this.mapElement.getMap(this.configuration);
         this.feature = 'faces';
-        this.applyBlockedMasks();
         // Map events
         this.map.on('zoomend', (ev) => { return this.onZoomChange(); });
         this.map.on('moveend', (ev) => { return this.onBoundsChange(); });
@@ -425,42 +421,6 @@ export class MapComponent implements OnInit, AfterViewInit {
     if (this.map) {
       this.flyToSmooth(this.map.getCenter(), this.maxZoom - 5, this.zoomOutDurationSec).subscribe();
     }
-  }
-
-  private blockItemById(itemID: number): void {
-    if (!Number.isFinite(itemID) || !this.configuration?.grid) {
-      return;
-    }
-    const idx = this.configuration.grid.findIndex((item) => item.item.id === itemID);
-    if (idx !== -1) {
-      const [blocked] = this.configuration.grid.splice(idx, 1);
-      this.blockedGridItems.push(blocked);
-      this.grid.next(this.configuration.grid);
-      this.addBlockedMask(blocked);
-    }
-  }
-
-  private applyBlockedMasks(): void {
-    if (!this.map) {
-      return;
-    }
-    this.blockedMasks.forEach((mask) => mask.remove());
-    this.blockedMasks = [];
-    this.blockedGridItems.forEach((item) => {
-      this.addBlockedMask(item);
-    });
-  }
-
-  private addBlockedMask(item: GridItem): void {
-    if (!this.map || !item?.pos) {
-      return;
-    }
-    const pos = item.pos;
-    const mask = L.rectangle(
-      [[-pos.y - 1, pos.x], [-pos.y, pos.x + 1]] as L.LatLngBoundsExpression,
-      { color: 'transparent', weight: 0, fillColor: this.blockedMaskColor, fillOpacity: 1, interactive: false }
-    ).addTo(this.map);
-    this.blockedMasks.push(mask);
   }
 
   focusOnSelf() {
