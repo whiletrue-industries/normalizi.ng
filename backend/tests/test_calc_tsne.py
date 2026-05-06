@@ -256,15 +256,23 @@ def test_main_finalizes_image_loaders_on_error(monkeypatch, mock_s3_upload):
     instances: list[object] = []
 
     class _FakeImageLoader:
+        """Mirrors the real ImageLoader's idempotent fini() so duplicate calls
+        (e.g. an explicit pre-tsne sync fini + the outer try/finally) don't
+        inflate the call log."""
+
         def __init__(self, images, args):
             self.images = images
             self.id = len(instances)
+            self.finalized = False
             instances.append(self)
 
         def start(self):
             start_calls.append(self.id)
 
         def fini(self):
+            if self.finalized:
+                return
+            self.finalized = True
             fini_calls.append(self.id)
 
     monkeypatch.setattr(calc_tsne_module, "ImageLoader", _FakeImageLoader)
